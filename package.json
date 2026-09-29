@@ -60,7 +60,7 @@
     "cli-table3": "^0.6.5",
     "commander": "^14.0.0",
     "picocolors": "^1.1.1",
-    "zod": "^3.25.0"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",
