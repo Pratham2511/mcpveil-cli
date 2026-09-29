@@ -5,13 +5,13 @@ import { execSync } from "node:child_process";
 import { readdirSync, rmSync } from "node:fs";
 
 const FRAMES = "/tmp/demo-frames";
-const OUT = "/home/z/my-project/mcpforge/assets/demo.gif";
+const OUT = "/home/z/my-project/mcpveil/assets/demo.gif";
 
 rmSync(FRAMES, { recursive: true, force: true });
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1000, height: 680 }, deviceScaleFactor: 1.5 });
-await page.goto("file:///home/z/my-project/mcpforge/scripts/demo.html");
+await page.goto("file:///home/z/my-project/mcpveil/scripts/demo.html");
 await page.waitForTimeout(300);
 
 const total = await page.evaluate(() => window.totalFrames);

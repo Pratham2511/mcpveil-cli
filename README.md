@@ -1,23 +1,23 @@
-# MCPForge
+# MCPVeil
 
 **The deterministic security test suite for MCP servers.**
 
-> Static scanners inspect what a server *advertises*. MCPForge proves what a
+> Static scanners inspect what a server *advertises*. MCPVeil proves what a
 > server **does** — by sending real exploit payloads through live MCP tool
 > calls and confirming exploitability from the responses.
 
-[![CI](https://github.com/Pratham2511/MCPForge/actions/workflows/ci.yml/badge.svg)](https://github.com/Pratham2511/MCPForge/actions/workflows/ci.yml)
-[![Security (dogfood)](https://github.com/Pratham2511/MCPForge/actions/workflows/security.yml/badge.svg)](https://github.com/Pratham2511/MCPForge/actions/workflows/security.yml)
-[![npm](https://img.shields.io/npm/v/mcpforge-cli)](https://www.npmjs.com/package/mcpforge-cli)
-[![Code Scanning](https://img.shields.io/badge/Code%20Scanning-SARIF%202.1.0-blueviolet)](https://github.com/Pratham2511/MCPForge/security/code-scanning)
+[![CI](https://github.com/Pratham2511/MCPVeil/actions/workflows/ci.yml/badge.svg)](https://github.com/Pratham2511/MCPVeil/actions/workflows/ci.yml)
+[![Security (dogfood)](https://github.com/Pratham2511/MCPVeil/actions/workflows/security.yml/badge.svg)](https://github.com/Pratham2511/MCPVeil/actions/workflows/security.yml)
+[![npm](https://img.shields.io/npm/v/mcpveil-cli)](https://www.npmjs.com/package/mcpveil-cli)
+[![Code Scanning](https://img.shields.io/badge/Code%20Scanning-SARIF%202.1.0-blueviolet)](https://github.com/Pratham2511/MCPVeil/security/code-scanning)
 [![license](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-18%20%7C%2020%20%7C%2022-brightgreen)](./package.json)
 
-![MCPForge scanning the vulnerable reference server](assets/demo.gif)
+![MCPVeil scanning the vulnerable reference server](assets/demo.gif)
 
 ---
 
-## Why MCPForge exists
+## Why MCPVeil exists
 
 The MCP ecosystem has a testing gap shaped exactly like this tool:
 
@@ -37,16 +37,16 @@ RCE) and [CVE-2025-6514](https://nvd.nist.gov/vuln/detail/CVE-2025-6514)
 (mcp-remote RCE) — made it painfully clear that MCP servers execute in
 privileged, file-and-network-reachable contexts.
 
-**MCPForge is the only CI-native tool that actively verifies MCP server
+**MCPVeil is the only CI-native tool that actively verifies MCP server
 exploitability: deterministic payloads through real MCP sessions, SARIF for
 GitHub Code Scanning, exit codes for PR gating, and an accuracy harness that
 gates its own CI on 100% recall / 0 false positives.**
 
-No LLM. No Docker. `npx mcpforge-cli`.
+No LLM. No Docker. `npx mcpveil-cli`.
 
 ## Validated against real MCP servers
 
-MCPForge is tested against the official `@modelcontextprotocol` servers people
+MCPVeil is tested against the official `@modelcontextprotocol` servers people
 actually run — not just its own fixtures. Latest validation run (v0.1.0, full
 active testing):
 
@@ -74,7 +74,7 @@ in the accuracy harness):
   verified live by scanning the GitHub server with all 12 write tools excluded.
 
 The reference implementations scored clean — which is itself the point: they
-are the ecosystem's hardened baseline, and MCPForge confirms it with hundreds
+are the ecosystem's hardened baseline, and MCPVeil confirms it with hundreds
 of real exploit attempts instead of a lint pass.
 
 ## How it works
@@ -136,17 +136,17 @@ and independently disableable.
 
 ```bash
 # stdio target — spawn and scan
-npx mcpforge-cli@latest scan --stdio "node dist/server.js" --yes
+npx mcpveil-cli@latest scan --stdio "node dist/server.js" --yes
 
 # HTTP target (streamable HTTP with automatic SSE fallback)
-npx mcpforge-cli@latest scan --url http://localhost:3000/mcp --yes
+npx mcpveil-cli@latest scan --url http://localhost:3000/mcp --yes
 
 # inventory only — zero tool invocations, static pass only
-npx mcpforge-cli@latest scan --stdio "python -m my_mcp_server" --inventory-only
+npx mcpveil-cli@latest scan --stdio "python -m my_mcp_server" --inventory-only
 
 # CI: SARIF for GitHub Code Scanning + policy exit code
-npx mcpforge-cli@latest scan --stdio "node dist/server.js" \
-  --format sarif -o mcpforge.sarif --fail-on high --yes
+npx mcpveil-cli@latest scan --stdio "node dist/server.js" \
+  --format sarif -o mcpveil.sarif --fail-on high --yes
 ```
 
 **Exit-code contract** (stable, CI-consumable):
@@ -174,7 +174,7 @@ on:
   push: { branches: [main] }
 
 jobs:
-  mcpforge:
+  mcpveil:
     runs-on: ubuntu-latest
     permissions:
       security-events: write
@@ -185,14 +185,14 @@ jobs:
         with: { node-version: 22 }
       - name: Build my MCP server
         run: npm ci && npm run build        # produces dist/server.js
-      - name: MCPForge scan
+      - name: MCPVeil scan
         run: |
-          npx mcpforge-cli@latest scan \
+          npx mcpveil-cli@latest scan \
             --stdio "node dist/server.js" \
-            --format sarif -o mcpforge.sarif --yes
+            --format sarif -o mcpveil.sarif --yes
       - name: Upload results to Code Scanning
         uses: github/codeql-action/upload-sarif@v3
-        with: { sarif_file: mcpforge.sarif }
+        with: { sarif_file: mcpveil.sarif }
 ```
 
 - `--fail-on high` blocks PRs with high/critical findings; `--fail-on medium`
@@ -233,7 +233,7 @@ npm run test:e2e          # the harness CI runs on Node 18/20/22
 <summary>Sample report — vulnerable reference server</summary>
 
 ```
-◆ MCPForge v0.1.0 — scan report
+◆ MCPVeil v0.1.0 — scan report
 target: stdio: node_modules/.bin/tsx test/vulnerable-server/index.ts
 inventory: 8 tools · 1 resources · 0 prompts
 
@@ -250,8 +250,8 @@ Posture score: 0/100 (grade F)   → exit 1
 
 ## Configuration
 
-CLI flags override `mcpforge.config.json` (see
-[mcpforge.config.example.json](mcpforge.config.example.json)):
+CLI flags override `mcpveil.config.json` (see
+[mcpveil.config.example.json](mcpveil.config.example.json)):
 
 ```jsonc
 {
@@ -272,7 +272,7 @@ CLI: `--stdio`, `--url`, `--transport`, `--format`, `-o`, `--fail-on`,
 Programmatic API:
 
 ```ts
-import { runScan, connect } from "mcpforge";
+import { runScan, connect } from "mcpveil";
 
 const session = await connect({ kind: "stdio", command: ["node", "dist/server.js"] });
 const report = await runScan(session.client, target, config);
@@ -282,7 +282,7 @@ await session.close();
 
 ## Research grounding
 
-MCPForge's check taxonomy follows the risk framework in
+MCPVeil's check taxonomy follows the risk framework in
 [*Enterprise-Grade Security for MCP*](https://arxiv.org/abs/2504.08623)
 (arXiv:2504.08623), and its active-testing approach extends the
 [**MCP Safety Audit**](https://arxiv.org/abs/2504.03767) (arXiv:2504.03767) —
@@ -295,7 +295,7 @@ persistent-concatenation SQLi class highlighted in the January 2026
 
 ## Comparison
 
-| | MCPForge | Snyk Agent Scan | NVIDIA SkillSpector | Tencent AI-Infra-Guard |
+| | MCPVeil | Snyk Agent Scan | NVIDIA SkillSpector | Tencent AI-Infra-Guard |
 |---|---|---|---|---|
 | Active payload testing of live servers | ✅ | ❌ static | ❌ static | ✅ platform-level |
 | Real MCP sessions (stdio / HTTP / SSE) | ✅ | descriptions only | n/a (skills) | ✅ |
@@ -311,11 +311,11 @@ persistent-concatenation SQLi class highlighted in the January 2026
 PRs welcome — the fastest way to help is a **payload pack** (labeled
 `good-first-issue`): see [CONTRIBUTING.md](CONTRIBUTING.md) for the
 echo-safety and non-destructiveness rules, and [ROADMAP.md](ROADMAP.md) for
-what's next (baselines, tool-drift detection, `mcpforge bench`).
+what's next (baselines, tool-drift detection, `mcpveil bench`).
 
 ## License & ethics
 
-[MIT](./LICENSE). MCPForge is a defensive testing tool — only scan servers you
+[MIT](./LICENSE). MCPVeil is a defensive testing tool — only scan servers you
 own or are authorized to test. Payloads are non-destructive by design (echo
 markers, canaries, tautologies); the vulnerable reference server ships only in
 `test/` and is never published to npm. See [SECURITY.md](SECURITY.md).

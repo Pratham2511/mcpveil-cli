@@ -8,7 +8,7 @@ updates:
       dev-dependencies:
         dependency-type: "development"
     ignore:
-      # vitest 4+/5+ dropped Node 18, which MCPForge still supports (engines
+      # vitest 4+/5+ dropped Node 18, which MCPVeil still supports (engines
       # >=18.17.0, CI matrix 18|20|22). Re-enable when Node 18 support ends.
       - dependency-name: "vitest"
         update-types: ["version-update:semver-major"]

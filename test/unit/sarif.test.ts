@@ -37,13 +37,13 @@ const report = {
   ],
   findings: [finding],
   score: { value: 80, grade: "B" as const },
-  mcpforgeVersion: "0.1.0",
+  mcpveilVersion: "0.1.0",
 } as unknown as ScanReport;
 
 it("produces parseable SARIF 2.1.0", () => {
   const sarif = JSON.parse(renderSarif(report));
   expect(sarif.version).toBe("2.1.0");
-  expect(sarif.runs[0].tool.driver.name).toBe("MCPForge");
+  expect(sarif.runs[0].tool.driver.name).toBe("MCPVeil");
 });
 
 it("maps every finding to a rule with a location", () => {
@@ -55,7 +55,7 @@ it("maps every finding to a rule with a location", () => {
   expect(sarif.runs[0].results[0].locations[0].physicalLocation.artifactLocation.uri).toBe("mcp://tool/read_file");
 });
 
-it("carries the mcpforge fingerprint for baseline suppression", () => {
+it("carries the mcpveil fingerprint for baseline suppression", () => {
   const sarif = JSON.parse(renderSarif(report));
   expect(sarif.runs[0].results[0].properties.fingerprint).toBe(finding.fingerprint);
 });

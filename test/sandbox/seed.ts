@@ -27,11 +27,11 @@ export interface Sandbox {
  *     .env                <- secret-file probe target
  */
 export function createSandbox(): Sandbox {
-  const root = mkdtempSync(join(tmpdir(), "mcpforge-vuln-"));
+  const root = mkdtempSync(join(tmpdir(), "mcpveil-vuln-"));
   const notesDir = join(root, "notes");
   mkdirSync(notesDir);
   writeFileSync(join(root, "canary.txt"), CANARY_CONTENT);
-  writeFileSync(join(notesDir, "welcome.txt"), "Welcome to MCPForge notes.");
+  writeFileSync(join(notesDir, "welcome.txt"), "Welcome to MCPVeil notes.");
   writeFileSync(
     join(root, ".env"),
     `DATABASE_URL=postgres://admin:hunter2@localhost:5432/prod\nAWS_ACCESS_KEY_ID=${FAKE_AWS_ACCESS_KEY}\nAWS_SECRET_ACCESS_KEY=${FAKE_AWS_SECRET}\n`

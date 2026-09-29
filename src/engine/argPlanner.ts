@@ -33,7 +33,7 @@ export function benignValue(p: ToolSchemaProperty): unknown {
       // fill only required nested fields so strict servers accept the call
       return benignObject(p);
     case "string":
-      return "mcpforge";
+      return "mcpveil";
     default:
       return null;
   }

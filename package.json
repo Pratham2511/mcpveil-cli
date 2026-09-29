@@ -1,5 +1,5 @@
 {
-  "name": "mcpforge-cli",
+  "name": "mcpveil-cli",
   "version": "0.1.1",
   "description": "Deterministic security test suite for MCP servers: sends real payloads through live MCP sessions and confirms exploitability from responses. CI-native with SARIF 2.1.0 output for GitHub Code Scanning.",
   "type": "module",
@@ -9,7 +9,7 @@
     "node": ">=18.17.0"
   },
   "bin": {
-    "mcpforge": "bin/mcpforge.js"
+    "mcpveil": "bin/mcpveil.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -21,15 +21,15 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Pratham2511/MCPForge.git"
+    "url": "git+https://github.com/Pratham2511/MCPVeil.git"
   },
-  "homepage": "https://github.com/Pratham2511/MCPForge#readme",
-  "bugs": "https://github.com/Pratham2511/MCPForge/issues",
+  "homepage": "https://github.com/Pratham2511/MCPVeil#readme",
+  "bugs": "https://github.com/Pratham2511/MCPVeil/issues",
   "scripts": {
     "build": "tsc",
     "pretest": "npm run build",
     "dev": "tsx src/cli.ts",
-    "mcpforge": "tsx src/cli.ts",
+    "mcpveil": "tsx src/cli.ts",
     "test": "vitest run",
     "test:unit": "vitest run test/unit",
     "test:e2e": "npm run build && vitest run test/e2e",

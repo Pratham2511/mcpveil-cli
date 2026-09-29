@@ -6,8 +6,8 @@ dist/
 *.tsbuildinfo
 
 # reports
-mcpforge.sarif
-mcpforge-report.json
+mcpveil.sarif
+mcpveil-report.json
 *.log
 
 # editor / OS

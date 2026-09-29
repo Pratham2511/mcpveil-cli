@@ -1,19 +1,19 @@
 ---
 name: Bug report
-about: Report a crash, false positive, or missed vulnerability in MCPForge
+about: Report a crash, false positive, or missed vulnerability in MCPVeil
 title: ''
 labels: ['bug']
 assignees: ['Pratham2511']
 ---
 
-Thanks for testing MCPForge against a real server — that's exactly what makes this tool better.
+Thanks for testing MCPVeil against a real server — that's exactly what makes this tool better.
 
 **What happened?**
 A clear and concise description. Which of these is it?
 
 - [ ] Scanner crashed / hung
 - [ ] False positive (finding reported on a server that is actually safe)
-- [ ] Missed vulnerability (a server is vulnerable but MCPForge reported nothing)
+- [ ] Missed vulnerability (a server is vulnerable but MCPVeil reported nothing)
 - [ ] Wrong severity / evidence / fingerprint
 - [ ] Report output problem (terminal / JSON / SARIF)
 - [ ] Install / CLI problem
@@ -21,8 +21,8 @@ A clear and concise description. Which of these is it?
 **Steps to reproduce**
 
 ```bash
-# the exact mcpforge command you ran
-mcpforge scan --stdio "..." --yes
+# the exact mcpveil command you ran
+mcpveil scan --stdio "..." --yes
 ```
 
 **Target server (sanitized)**
@@ -44,9 +44,9 @@ mcpforge scan --stdio "..." --yes
 
 - OS:
 - Node: (`node --version`)
-- mcpforge: (`npx mcpforge-cli --version`)
+- mcpveil: (`npx mcpveil-cli --version`)
 
 **Additional context**
 Anything else — logs, SARIF output, screenshots.
 
-> ⚠️ Please never paste real secrets into this issue. MCPForge masks evidence by design; keep it that way when you paste.
+> ⚠️ Please never paste real secrets into this issue. MCPVeil masks evidence by design; keep it that way when you paste.

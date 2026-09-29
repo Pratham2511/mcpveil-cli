@@ -7,7 +7,7 @@ assignees: ['Pratham2511']
 ---
 
 **Is your feature request related to a problem?**
-E.g. "I scanned a server whose tool accepts a callback URL and MCPForge had no way to test outbound calls to non-loopback hosts."
+E.g. "I scanned a server whose tool accepts a callback URL and MCPVeil had no way to test outbound calls to non-loopback hosts."
 
 **What do you want to add?**
 

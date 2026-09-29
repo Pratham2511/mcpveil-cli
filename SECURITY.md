@@ -14,7 +14,7 @@ Use GitHub's private vulnerability reporting on this repository
 (**Security → Report a vulnerability**), or contact the maintainer directly.
 Include:
 
-1. The MCPForge version and the exact command you ran.
+1. The MCPVeil version and the exact command you ran.
 2. The target server configuration (command / URL) used to reproduce.
 3. The report (`--format json`) or SARIF output demonstrating the issue.
 4. Your assessment of impact and suggested fix, if any.
@@ -27,7 +27,7 @@ is requested).
 
 In scope:
 
-- The `mcpforge` CLI, its transports, checks, and reporters.
+- The `mcpveil` CLI, its transports, checks, and reporters.
 - Generated artifacts (JSON / SARIF output) — e.g. injection of attacker-controlled
   strings into reports.
 - The GitHub Actions workflows in this repository.
@@ -45,7 +45,7 @@ Out of scope:
 
 ## Scanner safety model
 
-MCPForge is an *active* testing tool: it executes the target server and sends
+MCPVeil is an *active* testing tool: it executes the target server and sends
 attack payloads through its tools. Our own rules for shipped payloads:
 
 1. **Non-destructive by construction** — echo-markers instead of destructive

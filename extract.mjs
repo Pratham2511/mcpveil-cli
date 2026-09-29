@@ -3,15 +3,15 @@
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-const MD = "/home/z/my-project/MCPForge-MVP-Implementation-Prompt.md";
-const ROOT = "/home/z/my-project/mcpforge";
+const MD = "/home/z/my-project/MCPVeil-MVP-Implementation-Prompt.md";
+const ROOT = "/home/z/my-project/mcpveil";
 const lines = readFileSync(MD, "utf8").split("\n");
 
 // [sectionHeaderLine, blockIndexWithinSection, targetPath]
 const MAP = [
   [206, 0, "package.json"],
   [247, 0, "tsconfig.json"],
-  [274, 0, "bin/mcpforge.js"],
+  [274, 0, "bin/mcpveil.js"],
   [283, 0, "src/types.ts"],
   [392, 0, "src/config/loader.ts"],
   [429, 0, "src/payloads/traversal.ts"],
@@ -80,7 +80,7 @@ for (const [secLine, idx, target] of MAP) {
   const content = lines.slice(block.open, block.close - 1).join("\n") + "\n";
   const out = join(ROOT, target);
   mkdirSync(dirname(out), { recursive: true });
-  writeFileSync(out, content, { mode: target === "bin/mcpforge.js" ? 0o755 : 0o644 });
+  writeFileSync(out, content, { mode: target === "bin/mcpveil.js" ? 0o755 : 0o644 });
   console.log(`wrote ${target} (${content.split("\n").length} lines, lang=${block.lang})`);
   ok++;
 }

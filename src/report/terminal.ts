@@ -9,7 +9,7 @@ const SEV_COLOR: Record<string, (s: string) => string> = {
 export function renderTerminal(report: ScanReport): string {
   const lines: string[] = [];
 
-  lines.push(pc.bold(`\n◆ MCPForge v${report.mcpforgeVersion} — scan report`));
+  lines.push(pc.bold(`\n◆ MCPVeil v${report.mcpveilVersion} — scan report`));
   lines.push(pc.dim(`target: ${describeTarget(report.target)}`));
   lines.push(pc.dim(`server: ${report.serverInfo?.name ?? "unknown"} ${report.serverInfo?.version ?? ""}`));
   lines.push(pc.dim(`inventory: ${report.inventorySizes.tools} tools · ${report.inventorySizes.resources} resources · ${report.inventorySizes.prompts} prompts · ${report.durationMs}ms\n`));

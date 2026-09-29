@@ -1,5 +1,5 @@
 /**
- * HTTP fixture for the hardened control server — lets MCPForge exercise its
+ * HTTP fixture for the hardened control server — lets MCPVeil exercise its
  * streamable-HTTP transport and its SSE fallback locally.
  *
  *   streamable HTTP : POST/GET/DELETE  /mcp   (stateless JSON responses)

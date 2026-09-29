@@ -10,7 +10,7 @@ import { createSandbox } from "../sandbox/seed.js";
 
 export function buildSafeServer(): McpServer {
   const sandbox = createSandbox();
-  const server = new McpServer({ name: "mcpforge-safe", version: "0.1.0" });
+  const server = new McpServer({ name: "mcpveil-safe", version: "0.1.0" });
 
   function isInsideBase(base: string, candidate: string): boolean {
     const rel = resolve(base, candidate);
@@ -61,9 +61,9 @@ export function buildSafeServer(): McpServer {
   server.tool(
     "fetch_docs",
     "Fetch documentation from an allowlisted host.",
-    { url: z.string().describe("https://docs.mcpforge.dev/...") },
+    { url: z.string().describe("https://docs.mcpveil.dev/...") },
     async ({ url }) => {
-      const allowedHost = "docs.mcpforge.dev";
+      const allowedHost = "docs.mcpveil.dev";
       let parsed: URL;
       try { parsed = new URL(url); } catch { return { content: [{ type: "text", text: "Invalid URL." }], isError: true }; }
       if (parsed.protocol !== "https:" || parsed.hostname !== allowedHost) {

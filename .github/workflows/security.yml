@@ -16,17 +16,17 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: npm install && npm run build
-      # dogfood: MCPForge scanning its own hardened control server
+      # dogfood: MCPVeil scanning its own hardened control server
       # (scan may exit 1 if findings are ever reported — we still want the SARIF)
-      - name: MCPForge self-scan (static+active)
+      - name: MCPVeil self-scan (static+active)
         run: |
           node dist/cli.js scan \
             --stdio "node_modules/.bin/tsx test/safe-server/index.ts" \
-            --format sarif -o mcpforge.sarif --yes || true
+            --format sarif -o mcpveil.sarif --yes || true
       - name: Upload SARIF to Code Scanning
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
-          sarif_file: mcpforge.sarif
+          sarif_file: mcpveil.sarif
       # the accuracy gate itself lives in ci.yml — this workflow proves the
       # SARIF we ship is accepted by GitHub Code Scanning (dogfooding).

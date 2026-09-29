@@ -50,9 +50,9 @@ export function renderSarif(report: ScanReport): string {
       {
         tool: {
           driver: {
-            name: "MCPForge",
-            version: report.mcpforgeVersion,
-            informationUri: "https://github.com/Pratham2511/MCPForge",
+            name: "MCPVeil",
+            version: report.mcpveilVersion,
+            informationUri: "https://github.com/Pratham2511/MCPVeil",
             rules,
           },
         },

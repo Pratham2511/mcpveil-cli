@@ -46,7 +46,7 @@ export const COMMAND_SIGNALS = [
 export const SQL_INJECTION_PAYLOADS: InjectionPayload[] = [
   { arg: "' OR '1'='1", kind: "sql", note: "tautology - all rows" },
   { arg: "1' OR '1'='1' --", kind: "sql", note: "comment-out tautology" },
-  { arg: "'; DROP TABLE mcpforge_probe; --", kind: "sql", note: "stacked statement (detect via engine error)" },
+  { arg: "'; DROP TABLE mcpveil_probe; --", kind: "sql", note: "stacked statement (detect via engine error)" },
   { arg: "' UNION SELECT NULL, NULL --", kind: "sql", note: "union probe" },
   { arg: "\"; ", kind: "sql", note: "quote-break error probe" },
   { arg: "'", kind: "sql", note: "single quote error probe" },

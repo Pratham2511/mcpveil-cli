@@ -36,7 +36,7 @@ const REQUIRED_CHECKS = [
 ] as const;
 
 function scan(serverPath: string): { status: number | null; report: ScanReport; stderr: string } {
-  const outDir = mkdtempSync(join(tmpdir(), "mcpforge-e2e-"));
+  const outDir = mkdtempSync(join(tmpdir(), "mcpveil-e2e-"));
   const reportPath = join(outDir, "report.json");
   const res = spawnSync(
     process.execPath,

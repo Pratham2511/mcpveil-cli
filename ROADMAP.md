@@ -5,11 +5,11 @@ Everything below is ordered by demand signal, not by difficulty.
 
 ## v0.2 — CI ergonomics
 
-1. **Baseline suppression** (`--baseline mcpforge-baseline.json`): commit the
+1. **Baseline suppression** (`--baseline mcpveil-baseline.json`): commit the
    fingerprint set of known-accepted findings; new findings still fail the
    gate. Fingerprints are already in v0.1 reports — baselines are
    forward-compatible today.
-2. **First-party GitHub Action** (`mcpforge/action@v1`) wrapping the
+2. **First-party GitHub Action** (`mcpveil/action@v1`) wrapping the
    build → scan → upload-sarif loop, plus GitLab CI template and a pre-commit
    hook.
 3. **`--min-severity` reporting filter** distinct from `--fail-on` gating.
@@ -31,7 +31,7 @@ Everything below is ordered by demand signal, not by difficulty.
 
 ## v0.4 — performance benchmarking (the unique wedge)
 
-8. **`mcpforge bench`**: p50/p95/p99 tool-call latency, concurrency
+8. **`mcpveil bench`**: p50/p95/p99 tool-call latency, concurrency
    throughput, memory pegging over long sessions; regression gates for
    server authors. No verified competitor ships this.
 

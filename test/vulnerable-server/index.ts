@@ -1,7 +1,7 @@
 /**
- * DELIBERATELY VULNERABLE MCP SERVER — reference target for MCPForge's
+ * DELIBERATELY VULNERABLE MCP SERVER — reference target for MCPVeil's
  * accuracy harness. Uses real dangerous patterns on purpose.
- * Ships ONLY inside the mcpforge repo test suite; never published to npm
+ * Ships ONLY inside the mcpveil repo test suite; never published to npm
  * (test/ is outside the package `files` allowlist).
  *
  * Planted vulnerabilities (10):
@@ -38,7 +38,7 @@ admin.on("error", (err) => {
 });
 admin.listen(8377, "127.0.0.1");
 
-const server = new McpServer({ name: "mcpforge-vulnerable", version: "0.1.0" });
+const server = new McpServer({ name: "mcpveil-vulnerable", version: "0.1.0" });
 
 // 1) PATH TRAVERSAL: raw user path into fs
 server.tool(

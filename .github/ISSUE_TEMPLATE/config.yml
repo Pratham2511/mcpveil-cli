@@ -2,6 +2,6 @@
 # See https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-in-your-repository
 blank_issues_enabled: false
 contact_links:
-  - name: Security vulnerability in MCPForge itself
-    url: https://github.com/Pratham2511/MCPForge/blob/main/SECURITY.md
+  - name: Security vulnerability in MCPVeil itself
+    url: https://github.com/Pratham2511/MCPVeil/blob/main/SECURITY.md
     about: Please report vulnerabilities privately via SECURITY.md — do not open a public issue.

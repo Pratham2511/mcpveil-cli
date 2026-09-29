@@ -1,4 +1,4 @@
-# Contributing to MCPForge
+# Contributing to MCPVeil
 
 Thanks for helping make MCP server security testing deterministic and boring
 (in the way CI gates should be). This document covers how to set up, how we
@@ -7,8 +7,8 @@ review, and — most importantly — how to add payloads and checks safely.
 ## Development setup
 
 ```bash
-git clone https://github.com/Pratham2511/MCPForge.git
-cd MCPForge
+git clone https://github.com/Pratham2511/MCPVeil.git
+cd MCPVeil
 npm install
 npm run build
 npm test        # unit + e2e accuracy harness (builds first)
@@ -109,13 +109,13 @@ Most contributions are new entries in `src/payloads/*`. Rules:
 
 ## Reporting bugs
 
-Open a GitHub issue with the exact command, MCPForge version, target shape,
+Open a GitHub issue with the exact command, MCPVeil version, target shape,
 and the JSON report. **Do not attach real secrets** — reports are masked, but
-scrub before pasting. Suspected vulnerabilities in MCPForge itself go through
+scrub before pasting. Suspected vulnerabilities in MCPVeil itself go through
 [SECURITY.md](SECURITY.md).
 
 ## Ethics
 
-MCPForge is a defensive testing tool. Only scan servers you own or have
+MCPVeil is a defensive testing tool. Only scan servers you own or have
 written permission to test. PRs that add capability designed to attack
 third-party systems will be rejected.

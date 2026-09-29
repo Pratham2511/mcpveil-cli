@@ -103,7 +103,7 @@ export async function runScan(
     results: [...results.values()],
     findings: deduped,
     score: computeScore(deduped),
-    mcpforgeVersion: FORGE_CLIENT_VERSION,
+    mcpveilVersion: FORGE_CLIENT_VERSION,
   };
 }
 

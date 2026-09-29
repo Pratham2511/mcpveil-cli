@@ -35,7 +35,7 @@ interface CliOpts {
 const program = new Command();
 
 program
-  .name("mcpforge")
+  .name("mcpveil")
   .description("Deterministic security test suite for MCP servers: active payload-based scanning over real MCP sessions.")
   .version("0.1.0");
 
@@ -45,7 +45,7 @@ program
   .option("--stdio <command>", "spawn target via stdio, e.g. --stdio \"node dist/server.js\"")
   .option("--url <url>", "HTTP target (streamable HTTP with automatic SSE fallback)")
   .option("--transport <kind>", "force transport: stdio | streamable-http | sse")
-  .option("-c, --config <path>", "path to mcpforge.config.json")
+  .option("-c, --config <path>", "path to mcpveil.config.json")
   .option("--format <fmt>", "terminal | json | sarif")
   .option("-o, --output <path>", "write report to file instead of stdout")
   .option("--fail-on <sev>", "exit 1 when findings at/above this severity", "high")

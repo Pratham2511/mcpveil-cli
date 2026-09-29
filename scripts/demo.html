@@ -39,16 +39,16 @@
 </head>
 <body>
 <div class="term">
-  <div class="bar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div><span>mcpforge — zsh</span></div>
+  <div class="bar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div><span>mcpveil — zsh</span></div>
   <div class="body" id="out"></div>
 </div>
 <script>
 const H = [];
 
-H.push(`<span class="prompt">➜ </span><span class="dim">~/mcp-servers/registry-api</span> <span class="cmd">npx mcpforge</span> <span class="flag">scan</span> <span class="flag">--stdio</span> "node vulnerable-server.js" <span class="flag">--yes</span>`);
-H.push(`<span class="dim">[mcpforge] connecting via stdio…</span>`);
-H.push(`<span class="dim">[mcpforge] inventory: 8 tools · 1 resource · 0 prompts</span>`);
-H.push(`<span class="dim">[mcpforge] running check: path-traversal</span>`);
+H.push(`<span class="prompt">➜ </span><span class="dim">~/mcp-servers/registry-api</span> <span class="cmd">npx mcpveil</span> <span class="flag">scan</span> <span class="flag">--stdio</span> "node vulnerable-server.js" <span class="flag">--yes</span>`);
+H.push(`<span class="dim">[mcpveil] connecting via stdio…</span>`);
+H.push(`<span class="dim">[mcpveil] inventory: 8 tools · 1 resource · 0 prompts</span>`);
+H.push(`<span class="dim">[mcpveil] running check: path-traversal</span>`);
 H.push(`<span class="crit">  ✗ CRITICAL  command-injection  </span><span class="tool">run_command</span>      OS command injection confirmed (argument 'command')`);
 H.push(`<span class="crit">  ✗ CRITICAL  sql-injection      </span><span class="tool">search_users</span>    tautology row-blast: 3 rows vs 0 benign`);
 H.push(`<span class="crit">  ✗ CRITICAL  ssrf               </span><span class="tool">fetch_url</span>       loopback admin service reachable (127.0.0.1:8377)`);
@@ -58,7 +58,7 @@ H.push(`<span class="crit">  ✗ CRITICAL  credential-leak    </span><span class
 H.push(`<span class="crit">  ✗ CRITICAL  credential-leak    </span><span class="tool">get_system_info</span> GitHub PAT → ghp_****Q7r8`);
 H.push(`<span class="med">  ✗ MEDIUM    prompt-injection   </span><span class="tool">dictionary_lookup</span> invisible unicode U+200B/U+202E in description`);
 H.push(`<span class="med">  ✗ MEDIUM    prompt-injection   </span><span class="tool">dictionary_lookup</span> override phrasing: "ignore previous instructions"`);
-H.push(`<span class="dim">[mcpforge] 83 findings · 248 tool invocations · 10.3s</span>`);
+H.push(`<span class="dim">[mcpveil] 83 findings · 248 tool invocations · 10.3s</span>`);
 H.push(`<span class="hr">──────────────────────────────────────────────────────────</span>`);
 H.push(`<span class="dim"> Check              Invocations   Findings   Errors</span>`);
 H.push(`<span class="dim"> path-traversal     96            13         0</span>`);
@@ -69,7 +69,7 @@ H.push(`<span class="dim"> credential-leak    72            51         0</span>`
 H.push(`<span class="dim"> prompt-injection   0 (static)    2          0</span>`);
 H.push(``);
 H.push(`Posture score: <span class="score-f">0/100</span>  <span class="score-badge">GRADE F</span>`);
-H.push(`<span class="dim">SARIF written to mcpforge.sarif · upload to GitHub Code Scanning</span>`);
+H.push(`<span class="dim">SARIF written to mcpveil.sarif · upload to GitHub Code Scanning</span>`);
 H.push(`<span class="crit">✖ exit 1 — findings at/above fail-on threshold</span>`);
 H.push(`<span class="prompt">➜ </span><span class="dim">~/mcp-servers/registry-api</span> <span class="cursor"></span>`);
 

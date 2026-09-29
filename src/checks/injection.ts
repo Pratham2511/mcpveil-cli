@@ -113,6 +113,6 @@ function benignOf(p: { type: string; enum?: string[] }): unknown {
   if (p.enum?.length) return p.enum[0];
   if (p.type === "number" || p.type === "integer") return 1;
   if (p.type === "boolean") return false;
-  if (p.type === "string") return "mcpforge";
+  if (p.type === "string") return "mcpveil";
   return null;
 }

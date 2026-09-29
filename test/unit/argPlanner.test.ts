@@ -87,7 +87,7 @@ describe("nested schema planning (real-world array/object tools)", () => {
     expect(first.placement).toBe("entities[].name"); // "name" matches SQL hints
     const item = (first.args.entities as unknown[])[0] as Record<string, unknown>;
     expect(item.name).toBe("' OR 1=1--");
-    expect(item.entityType).toBe("mcpforge"); // required sibling filled benignly
+    expect(item.entityType).toBe("mcpveil"); // required sibling filled benignly
   });
 
   it("plants payloads inside array-of-string required args", () => {
@@ -126,7 +126,7 @@ describe("nested schema planning (real-world array/object tools)", () => {
     };
     const calls = planCalls(mixed, "sql", ["' OR 1=1--"], 12);
     expect(calls[0]!.args.query).toBe("' OR 1=1--");
-    expect(calls[0]!.args.tags).toEqual(["mcpforge"]); // one benign item, not []
+    expect(calls[0]!.args.tags).toEqual(["mcpveil"]); // one benign item, not []
   });
 
   it("plants payloads inside object-typed args with nested strings", () => {

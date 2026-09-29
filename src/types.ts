@@ -94,7 +94,7 @@ export interface ScanReport {
   results: CheckResult[];
   findings: Finding[];
   score: { value: number; grade: "A" | "B" | "C" | "D" | "F" };
-  mcpforgeVersion: string;
+  mcpveilVersion: string;
 }
 
 export interface ForgeConfig {
