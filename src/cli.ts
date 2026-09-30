@@ -149,4 +149,12 @@ function shellSplit(s: string): string[] {
   return out;
 }
 
-program.parseAsync(process.argv);
+if (process.argv.length <= 2) {
+  program.outputHelp();
+  process.exit(EXIT.CLEAN);
+}
+
+program.parseAsync(process.argv).catch((err: unknown) => {
+  log.error(err instanceof Error ? err.message : String(err));
+  process.exit(EXIT.USAGE);
+});
