@@ -37,7 +37,7 @@ const program = new Command();
 program
   .name("mcpveil")
   .description("Deterministic security test suite for MCP servers: active payload-based scanning over real MCP sessions.")
-  .version("0.1.0");
+  .version("0.1.2");
 
 program
   .command("scan")
@@ -131,8 +131,8 @@ async function scanAction(opts: CliOpts): Promise<number> {
 function shouldFail(severities: Severity[], failOn: Severity | "never"): boolean {
   if (failOn === "never") return false;
   const threshold = SEVERITIES.indexOf(failOn);
-  if (threshold < 0) throw new UsageError(`--fail-on must be one of ${SEVERITIES.join("|")} | never`);
-  return severities.some((s) => SEVERITIES.indexOf(s) <= threshold);
+  if (threshold < 0) throw new UsageError(`--fail-on must be one of ${SEVERITIES.join("|") } | never`);
+  return severities.some((s) => SEVERITIES.indexOf(s) >= threshold);
 }
 
 /** Minimal shell-like split honoring double quotes: "node a.js --x 1" → ["node","a.js","--x","1"] */
