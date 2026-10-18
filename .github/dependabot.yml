@@ -8,8 +8,8 @@ updates:
       dev-dependencies:
         dependency-type: "development"
     ignore:
-      # vitest 4+/5+ dropped Node 18, which MCPVeil still supports (engines
-      # >=18.17.0, CI matrix 18|20|22). Re-enable when Node 18 support ends.
+      # Vitest runs on Node 22 separately from the CLI runtime matrix.
+      # Review future major upgrades for test-toolchain compatibility.
       - dependency-name: "vitest"
         update-types: ["version-update:semver-major"]
       - dependency-name: "@vitest/mocker"
