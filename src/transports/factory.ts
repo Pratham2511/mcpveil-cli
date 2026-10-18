@@ -3,9 +3,10 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import type { ScanTarget } from "../types.js";
+import { VERSION } from "../version.js";
 
 export const FORGE_CLIENT_NAME = "mcpveil";
-export const FORGE_CLIENT_VERSION = "0.1.2";
+export const FORGE_CLIENT_VERSION = VERSION;
 
 export interface ForgeSession {
   client: Client;
