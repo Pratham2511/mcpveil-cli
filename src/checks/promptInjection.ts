@@ -1,6 +1,7 @@
 import type { ScanContext } from "../engine/scanner.js";
 import { INJECTION_PHRASES, INVISIBLE_UNICODE } from "../payloads/secretPatterns.js";
 import { excerpt } from "../utils/mask.js";
+import { fingerprint } from "../engine/analyzer.js";
 
 const REMEDIATION =
   "Treat tool descriptions as data, not instructions. Remove imperative second-person text aimed at the model, strip invisible/bidi unicode from metadata, and re-hash tools/list output at deploy time to detect rug-pull edits (roadmap check: tool-drift).";
@@ -47,7 +48,7 @@ function inspect(ctx: ScanContext, source: { tool?: string; kind: string }, text
         evidence: excerpt(text, m.index ?? 0),
         severity: "medium",
         confidence: "confirmed",
-        title: `Invisible unicode character in ${source.kind}${source.tool ? ` (tool '${toolName(source.tool)}')` : ""} — common tool-poisoning smuggle channel`,
+        title: `Invisible unicode character in ${source.kind}${source.tool ? ` (tool '${source.tool}')` : ""} — common tool-poisoning smuggle channel`,
         remediation: REMEDIATION,
         fingerprint: fingerprint(["prompt-injection", source.tool, source.kind, "invisible-unicode"]),
       });
@@ -55,6 +56,3 @@ function inspect(ctx: ScanContext, source: { tool?: string; kind: string }, text
     }
   }
 }
-
-import { fingerprint } from "../engine/analyzer.js";
-function toolName(t: string): string { return t; }
