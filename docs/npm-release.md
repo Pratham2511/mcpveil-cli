@@ -1,0 +1,53 @@
+# Publishing MCPVeil to npm
+
+The next release is `mcpveil-cli@0.1.3`. Merging its PR runs CI; publishing a
+GitHub release with tag `v0.1.3` starts `.github/workflows/publish.yml`.
+The workflow requires the tagged commit to be on `main` and its version to
+match `package.json`. It runs dependency checks, lint, tests, and a fresh
+package-install check before publishing to npmjs.com.
+
+## One-time npm account setup
+
+After merging, open the [package settings](https://www.npmjs.com/package/mcpveil-cli/access)
+and add a GitHub Actions trusted publisher:
+
+| Field | Value |
+| --- | --- |
+| Organization or user | `Pratham2511` |
+| Repository | `mcpveli` |
+| Workflow filename | `publish.yml` |
+| Environment | Leave empty |
+| Allowed action | Allow `npm publish` |
+
+This uses OIDC and provenance; no npm token or GitHub secret is needed.
+Create the publisher close to release time: npm requires its first publish
+within two days. See [npm's trusted publishing guide](https://docs.npmjs.com/trusted-publishers/).
+
+## Release steps
+
+1. Review and merge the security/release PR after all checks pass.
+2. Complete the trusted-publisher setup above.
+3. Create a GitHub release from `main` with tag `v0.1.3`, then publish it.
+4. Check the **Publish to npm** workflow and the package's npm page.
+
+For later releases, update `package.json` and run `npm install --package-lock-only`
+to synchronize `npm-shrinkwrap.json`. The CLI and MCP client read the package
+version automatically. Use a matching `v<version>` release tag.
+
+## Dependency security
+
+`npm-shrinkwrap.json` replaces `package-lock.json` and ships with this CLI so
+installations retain the verified transitive dependencies:
+
+| Dependency | Previous | Updated |
+| --- | --- | --- |
+| `qs` | 6.16.0 | 6.16.1 |
+| `ip-address` | 10.7.2 | 10.7.4 |
+| `hono` | 4.13.9 | 4.13.13 |
+
+Keep updating this lockfile for future advisories. `npm run test:package`
+checks a fresh tarball installation for the patched minimum versions.
+
+Advisories: [qs](https://github.com/ljharb/qs/security/advisories/GHSA-6pq8-jhm2-2vcw),
+[ip-address](https://github.com/beaugunderson/ip-address/security/advisories/GHSA-rxp7-6hxx-x8q5),
+and [Hono](https://github.com/honojs/hono/security/advisories/GHSA-5r4p-p66f-jhc7).

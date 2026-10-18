@@ -29,3 +29,6 @@ jobs:
       - run: npm run test:e2e   # the accuracy harness gate
         env:
           MCPVEIL_TEST_NODE: ${{ steps.runtime.outputs.node }}
+      - run: npm run test:package
+        env:
+          MCPVEIL_TEST_NODE: ${{ steps.runtime.outputs.node }}

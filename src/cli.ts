@@ -9,6 +9,7 @@ import { renderJson } from "./report/json.js";
 import { renderSarif } from "./report/sarif.js";
 import type { ScanTarget, TransportKind, Severity, ForgeConfig } from "./types.js";
 import { log } from "./utils/logger.js";
+import { VERSION } from "./version.js";
 
 export const EXIT = { CLEAN: 0, POLICY_FAIL: 1, SCAN_FAIL: 2, USAGE: 3 } as const;
 
@@ -37,7 +38,7 @@ const program = new Command();
 program
   .name("mcpveil")
   .description("Deterministic security test suite for MCP servers: active payload-based scanning over real MCP sessions.")
-  .version("0.1.2");
+  .version(VERSION);
 
 program
   .command("scan")
