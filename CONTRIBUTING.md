@@ -14,7 +14,14 @@ npm run build
 npm test        # unit + e2e accuracy harness (builds first)
 ```
 
-Requirements: Node ≥ 18.17 (18/20/22 supported), npm.
+Development requirements: Node 22 (≥22.12.0) and npm for Vitest 5.
+The CLI accuracy harness still tests the built CLI and fixture servers on
+Node 18/20/22. To select another installed CLI runtime while keeping Vitest
+on Node 22, use an absolute path:
+
+```bash
+MCPVEIL_TEST_NODE=/path/to/node18/bin/node npm run test:e2e
+```
 
 Verify your toolchain with the accuracy harness:
 
@@ -96,7 +103,8 @@ Most contributions are new entries in `src/payloads/*`. Rules:
 
 ## Review process
 
-- CI must be green: lint (strict tsc), unit, e2e harness, on Node 18/20/22.
+- CI must be green: lint (strict tsc) and unit tests on Node 22, plus the
+  e2e accuracy harness against the CLI and fixture servers on Node 18/20/22.
 - One maintainer review for docs/tests; two for new checks or payloads.
 - Keep `src/` free of `any` leaks and LLM dependencies (v0.1 contract).
 

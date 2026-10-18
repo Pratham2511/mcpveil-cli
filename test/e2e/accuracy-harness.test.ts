@@ -14,7 +14,7 @@
 import { describe, it, expect } from "vitest";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { existsSync } from "node:fs";
@@ -25,6 +25,14 @@ const CLI = join(ROOT, "dist", "cli.js");
 const VULN_SERVER = join(ROOT, "test", "vulnerable-server", "index.ts");
 const SAFE_SERVER = join(ROOT, "test", "safe-server", "index.ts");
 const TSX = join(ROOT, "node_modules", ".bin", "tsx");
+// Keep the test runner on its supported Node version while exercising the
+// shipped CLI and tsx fixture subprocesses on each supported CLI runtime.
+const TEST_NODE = process.env.MCPVEIL_TEST_NODE || process.execPath;
+const SCAN_ENV = {
+  ...process.env,
+  CI: "true",
+  PATH: `${dirname(TEST_NODE)}${delimiter}${process.env.PATH ?? ""}`,
+};
 
 const REQUIRED_CHECKS = [
   "path-traversal",
@@ -39,7 +47,7 @@ function scan(serverPath: string): { status: number | null; report: ScanReport; 
   const outDir = mkdtempSync(join(tmpdir(), "mcpveil-e2e-"));
   const reportPath = join(outDir, "report.json");
   const res = spawnSync(
-    process.execPath,
+    TEST_NODE,
     [
       CLI, "scan",
       "--stdio", `${TSX} ${serverPath}`,
@@ -48,7 +56,7 @@ function scan(serverPath: string): { status: number | null; report: ScanReport; 
       "--yes",
       "--timeout", "6000",
     ],
-    { encoding: "utf8", env: { ...process.env, CI: "true" }, timeout: 180_000 }
+    { encoding: "utf8", env: SCAN_ENV, timeout: 180_000 }
   );
   if (!existsSync(reportPath)) {
     throw new Error(`no report produced (exit=${res.status})\nstderr:\n${res.stderr}\nstdout:\n${res.stdout}`);

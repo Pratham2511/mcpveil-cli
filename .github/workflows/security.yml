@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with: { node-version: 22 }
-      - run: npm install && npm run build
+      - run: npm ci && npm run build
       # dogfood: MCPVeil scanning its own hardened control server
       # (scan may exit 1 if findings are ever reported — we still want the SARIF)
       - name: MCPVeil self-scan (static+active)
