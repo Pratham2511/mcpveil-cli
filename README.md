@@ -308,6 +308,9 @@ persistent-concatenation SQLi class highlighted in the January 2026
 
 ## Contributing
 
+Release maintainers: see [Publishing to npm](docs/npm-release.md) for the
+GitHub Actions trusted-publisher setup and release steps.
+
 PRs welcome — the fastest way to help is a **payload pack** (labeled
 `good-first-issue`): see [CONTRIBUTING.md](CONTRIBUTING.md) for the
 echo-safety and non-destructiveness rules, and [ROADMAP.md](ROADMAP.md) for
