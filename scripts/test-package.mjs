@@ -8,6 +8,7 @@ import { assertPatchedDependencies } from "./dependency-policy.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+assert.equal(manifest.author, "MCPVeil contributors", "Package author must not contain personal contact details");
 const scratch = mkdtempSync(join(tmpdir(), "mcpveil-package-"));
 const runtime = process.env.MCPVEIL_TEST_NODE || process.execPath;
 assert(process.env.npm_execpath, "Run this check using npm run test:package");
@@ -40,6 +41,9 @@ try {
   for (const path of files) {
     assert(!/^(test|src|scripts|\.github|node_modules)\//.test(path), `Unexpected published file: ${path}`);
     assert(!/(^|\/)\.env(?:\.|$)/.test(path), `Unexpected environment file: ${path}`);
+    assert(!/(^|\/)(?:\.npmrc|\.aws|\.ssh|\.codex|\.agents|id_rsa|id_ed25519|credentials\.json)(?:\/|$|\.)/.test(path),
+      `Unexpected private configuration file: ${path}`);
+    assert(!/\.(?:pem|key|p12|pfx)$/.test(path), `Unexpected key file: ${path}`);
   }
 
   writeFileSync(join(scratch, "package.json"), JSON.stringify({ name: "mcpveil-package-smoke", private: true, version: "0.0.0" }));

@@ -32,6 +32,8 @@ jobs:
           package-manager-cache: false
       - name: Install npm with trusted publishing support
         run: npm install --global npm@11
+      - name: Prepare repository metadata from GitHub context
+        run: node scripts/prepare-publish.mjs
       - name: Check release tag against package version
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}

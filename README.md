@@ -6,14 +6,14 @@
 > server **does** — by sending real exploit payloads through live MCP tool
 > calls and confirming exploitability from the responses.
 
-[![CI](https://github.com/Pratham2511/MCPVeil/actions/workflows/ci.yml/badge.svg)](https://github.com/Pratham2511/MCPVeil/actions/workflows/ci.yml)
-[![Security (dogfood)](https://github.com/Pratham2511/MCPVeil/actions/workflows/security.yml/badge.svg)](https://github.com/Pratham2511/MCPVeil/actions/workflows/security.yml)
 [![npm](https://img.shields.io/npm/v/mcpveil-cli)](https://www.npmjs.com/package/mcpveil-cli)
-[![Code Scanning](https://img.shields.io/badge/Code%20Scanning-SARIF%202.1.0-blueviolet)](https://github.com/Pratham2511/MCPVeil/security/code-scanning)
+[![Code Scanning](https://img.shields.io/badge/Code%20Scanning-SARIF%202.1.0-blueviolet)](SECURITY.md)
 [![license](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-18%20%7C%2020%20%7C%2022-brightgreen)](./package.json)
 
 ![MCPVeil scanning the vulnerable reference server](assets/demo.gif)
+
+[CI workflow](.github/workflows/ci.yml) · [Security workflow](.github/workflows/security.yml)
 
 ---
 

@@ -3,7 +3,7 @@ name: Bug report
 about: Report a crash, false positive, or missed vulnerability in MCPVeil
 title: ''
 labels: ['bug']
-assignees: ['Pratham2511']
+assignees: []
 ---
 
 Thanks for testing MCPVeil against a real server — that's exactly what makes this tool better.
