@@ -18,3 +18,27 @@ mcpveil-report.json
 # env files (never commit real secrets; the test fixture generates its own)
 .env
 .env.local
+.env.*
+!.env.example
+!.env.sample
+
+# Local credentials, private keys, and account/tool configuration
+.npmrc
+.aws/
+.ssh/
+.codex/
+.agents/
+credentials.json
+*credentials*.json
+id_rsa*
+id_ed25519*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local scan/export artifacts
+*.sarif
+mcpveil-report*.json
+*.tgz
+.cache/

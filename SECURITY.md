@@ -43,6 +43,22 @@ Out of scope:
   Model Context Protocol project).
 - Social engineering, physical attacks, or denial-of-service volume attacks.
 
+## Repository privacy
+
+Do not commit local account configuration, `.npmrc`, cloud credentials,
+private keys, `.env` files, or scan reports containing private data. The
+ignore rules protect common local files, and CI scans Git history for
+credentials. The npm package includes only its declared distribution files;
+`npm run test:package` verifies that private configuration is excluded.
+
+The values in `test/sandbox/seed.ts` and secret-pattern unit tests are
+synthetic examples. Test servers create their sandbox under the operating
+system's temporary directory; they do not import the maintainer's home files.
+
+Removing personal details from current files does not erase historical Git
+author records or previously published npm versions. Report any actual
+credential exposure privately and revoke the affected credential.
+
 ## Scanner safety model
 
 MCPVeil is an *active* testing tool: it executes the target server and sends

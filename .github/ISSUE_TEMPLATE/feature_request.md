@@ -3,7 +3,7 @@ name: Feature request
 about: Propose a new check, payload, transport, or integration
 title: ''
 labels: ['enhancement']
-assignees: ['Pratham2511']
+assignees: []
 ---
 
 **Is your feature request related to a problem?**
