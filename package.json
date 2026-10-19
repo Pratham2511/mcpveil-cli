@@ -4,7 +4,7 @@
   "description": "Deterministic security test suite for MCP servers: sends real payloads through live MCP sessions and confirms exploitability from responses. CI-native with SARIF 2.1.0 output for GitHub Code Scanning.",
   "type": "module",
   "license": "MIT",
-  "author": "Pratham Pansare <prathampansare9@gmail.com> (https://github.com/Pratham2511)",
+  "author": "MCPVeil contributors",
   "engines": {
     "node": ">=18.17.0"
   },
@@ -20,12 +20,7 @@
     "README.md",
     "LICENSE"
   ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Pratham2511/mcpveli.git"
-  },
-  "homepage": "https://github.com/Pratham2511/mcpveli#readme",
-  "bugs": "https://github.com/Pratham2511/mcpveli/issues",
+  "homepage": "https://www.npmjs.com/package/mcpveil-cli",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"

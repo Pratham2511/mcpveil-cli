@@ -6,10 +6,10 @@ review, and — most importantly — how to add payloads and checks safely.
 
 ## Development setup
 
+Clone this repository and open its root directory, then run:
+
 ```bash
-git clone https://github.com/Pratham2511/MCPVeil.git
-cd MCPVeil
-npm install
+npm ci
 npm run build
 npm test        # unit + e2e accuracy harness (builds first)
 ```

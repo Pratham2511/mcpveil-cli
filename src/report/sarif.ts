@@ -52,7 +52,7 @@ export function renderSarif(report: ScanReport): string {
           driver: {
             name: "MCPVeil",
             version: report.mcpveilVersion,
-            informationUri: "https://github.com/Pratham2511/MCPVeil",
+            informationUri: "https://www.npmjs.com/package/mcpveil-cli",
             rules,
           },
         },

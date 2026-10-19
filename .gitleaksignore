@@ -1,0 +1,3 @@
+# Exact historical false positive: a synthetic secret-pattern test vector.
+# New commits and any other credentials in this file remain fully scanned.
+da581ef8d1bc51ce29f77219fff1ab6b6ae988c5:test/unit/secretPatterns.test.ts:generic-api-key:13
