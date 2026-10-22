@@ -1,13 +1,14 @@
 import Table from "cli-table3";
 import pc from "picocolors";
 import type { ScanReport } from "../types.js";
-import { redactCommand, redactText } from "../utils/redact.js";
+import { redactCommand, redactValue } from "../utils/redact.js";
 
 const SEV_COLOR: Record<string, (s: string) => string> = {
   critical: pc.red, high: pc.red, medium: pc.yellow, low: pc.cyan, info: pc.dim,
 };
 
 export function renderTerminal(report: ScanReport): string {
+  report = redactValue(report);
   const lines: string[] = [];
 
   lines.push(pc.bold(`\n◆ MCPVeil v${report.mcpveilVersion} — scan report`));
@@ -17,26 +18,34 @@ export function renderTerminal(report: ScanReport): string {
   lines.push(pc.dim(`inventory: ${report.inventorySizes.tools} tools · ${report.inventorySizes.resources} resources · ${report.inventorySizes.prompts} prompts · ${report.durationMs}ms\n`));
 
   const table = new Table({
-    head: ["Severity", "Check", "Tool/Resource", "Finding"],
-    style: { head: ["bold"] },
+    head: ["Severity", "Check", "Tool/Resource", "Evidence"],
+    style: { head: ["bold"], compact: true },
   });
-  for (const f of report.findings) {
+  const groups = new Map<string, { finding: ScanReport["findings"][number]; count: number }>();
+  for (const finding of report.findings) {
+    const key = `${finding.checkId}:${finding.tool ?? finding.resource ?? "server"}:${finding.severity}:${finding.confidence}`;
+    const previous = groups.get(key);
+    if (previous) previous.count++; else groups.set(key, { finding, count: 1 });
+  }
+  for (const { finding: f, count } of groups.values()) {
     const color = SEV_COLOR[f.severity] ?? ((s: string) => s);
     table.push([
       color(f.severity.toUpperCase()),
       f.checkId,
       f.tool ?? f.resource ?? "-",
-      f.title,
+      `${f.confidence} (${count} signal${count === 1 ? "" : "s"})`,
     ]);
   }
   if (report.findings.length === 0) {
     lines.push(report.status === "complete" ? "No findings within the reported scan scope.\n" : "Assessment incomplete. Absence of findings is not a clean result.\n");
   } else {
     lines.push(table.toString(), "");
+    for (const { finding } of [...groups.values()].filter((item, index, all) => all.findIndex((v) => v.finding.checkId === item.finding.checkId) === index)) lines.push(`${finding.checkId}: ${finding.remediation}`);
+    lines.push("Full per-probe evidence: use --format json or --format sarif.\n");
   }
 
   // per-check rollup with invocation counts
-  const roll = new Table({ head: ["Check", "Invocations", "Findings", "Errors", "Skipped"], style: { head: ["bold"] } });
+  const roll = new Table({ head: ["Check", "Invocations", "Findings", "Errors", "Skipped"], style: { head: ["bold"], compact: true } });
   for (const r of report.results) {
     roll.push([r.meta.id, String(r.invocations), String(r.findings.length), String(r.errors.length), r.skipped ?? "-"]);
   }
@@ -49,7 +58,7 @@ export function renderTerminal(report: ScanReport): string {
   for (const error of report.errors ?? []) lines.push(`Error: ${error}`);
   for (const limitation of report.coverage?.limitations ?? []) lines.push(`Untested: ${limitation}`);
   lines.push("");
-  return redactText(lines.join("\n"));
+  return lines.join("\n");
 }
 
 function describeTarget(t: ScanReport["target"]): string {

@@ -1,8 +1,9 @@
+import { flattenProperties } from "../engine/schema.js";
 import type { ScanContext } from "../engine/scanner.js";
 import { analyze } from "../engine/analyzer.js";
 import { SECRET_PATTERNS } from "../payloads/secretPatterns.js";
 import { SECRET_FILE_PROBES } from "../payloads/traversal.js";
-import { planCalls } from "../engine/argPlanner.js";
+import { planCalls, benignValue } from "../engine/argPlanner.js";
 import { mask, excerpt } from "../utils/mask.js";
 import { fingerprint } from "../engine/analyzer.js";
 
@@ -15,7 +16,7 @@ export async function runCredentialLeak(ctx: ScanContext): Promise<void> {
   // 1) static: descriptions + resource contents (always runs, even --inventory-only)
   for (const tool of inv.tools) {
     scanText(ctx, { tool: tool.name, kind: "tool description" }, tool.description);
-    for (const p of tool.properties) {
+    for (const p of flattenProperties(tool.properties)) {
       if (p.description) scanText(ctx, { tool: tool.name, kind: `argument '${p.name}' description` }, p.description);
     }
   }
@@ -47,19 +48,18 @@ export async function runCredentialLeak(ctx: ScanContext): Promise<void> {
           if (!outcome.ok || !outcome.text) continue;
         scanText(ctx, {
           tool: tool.name,
-          kind: `response to probe '${call.args[call.attacked[0]!]}'`,
-          payload: call.args[call.attacked[0]!] as string,
+          kind: `response to probe '${call.value}'`,
+          payload: call.value,
         }, outcome.text);
       }
     }
-    // 3) active: zero-argument tools are pure response surfaces (e.g. tools that
-    //    dump process.env or diagnostics) — no payload placement exists, so
-    //    invoke each once with {} and scan the response for secret shapes.
+    // 3) Tools without injectable fields still expose response surfaces.
+    //    Use one schema-aware benign call ({} for zero-argument tools).
     for (const tool of inv.tools) {
-      if (tool.properties.length > 0) continue;
-      const outcome = await ctx.invokeTool("credential-leak", tool.name, {});
+      if (planCalls(tool, "path", SECRET_FILE_PROBES, 1).length || flattenProperties(tool.properties).some((p) => p.type === "unknown" || (p.type === "array" && !p.items))) continue;
+      const outcome = await ctx.invokeTool("credential-leak", tool.name, Object.fromEntries(tool.properties.filter((p) => p.required).map((p) => [p.name, benignValue(p)])));
       if (!outcome.ok || !outcome.text) continue;
-      scanText(ctx, { tool: tool.name, kind: "response (no-argument invocation)" }, outcome.text);
+      scanText(ctx, { tool: tool.name, kind: "response (benign invocation)" }, outcome.text);
     }
   }
 }

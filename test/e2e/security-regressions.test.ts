@@ -125,11 +125,12 @@ it("validates options before starting the target", () => {
   }
 });
 
-it("reports unsupported schemas as untested instead of A", () => {
+it("tests deep schemas and finds nested response secrets", () => {
   const result = scan("deep-schema");
-  expect(result.status).toBe(2);
-  expect(result.report!.score).toBeNull();
-  expect(result.report!.coverage.untestedTools).toContain("lookup");
+  expect(result.status).toBe(1);
+  expect(result.report!.coverage.untestedTools).toEqual([]);
+  expect(result.report!.findings.some((finding) => finding.checkId === "credential-leak")).toBe(true);
+  expect(result.events.some((event: any) => event.args?.request?.options?.query)).toBe(true);
 });
 
 it("inspects resources, prompt content, and server instructions", () => {
