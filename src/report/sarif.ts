@@ -23,6 +23,8 @@ export function renderSarif(report: ScanReport): string {
 
   const results = report.findings.map((f) => ({
     ruleId: `MCPF/${f.checkId}`,
+    ...(f.baselineState ? { baselineState: f.baselineState === "accepted" ? "unchanged" : "new" } : {}),
+    ...(f.baselineState === "accepted" ? { suppressions: [{ kind: "external", status: "accepted", justification: "Reviewed target-scoped MCPVeil baseline" }] } : {}),
     level: SEV_TO_SARIF[f.severity] ?? "note",
     message: {
       text: `${f.title}. Evidence: ${f.evidence}`,
@@ -36,7 +38,7 @@ export function renderSarif(report: ScanReport): string {
       {
         physicalLocation: {
           artifactLocation: {
-            uri: f.tool ? `mcp://tool/${f.tool}` : `mcp://resource/${encodeURIComponent(f.resource ?? "server")}`,
+            uri: f.tool ? `mcp://tool/${encodeURIComponent(f.tool)}` : `mcp://resource/${encodeURIComponent(f.resource ?? "server")}`,
           },
         },
         logicalLocations: [{ name: f.tool ?? f.resource ?? "server", kind: "resource" }],
@@ -65,7 +67,7 @@ export function renderSarif(report: ScanReport): string {
           },
         ],
         results,
-        properties: { schemaVersion: report.schemaVersion, status: report.status, mode: report.mode, coverage: report.coverage },
+        properties: { schemaVersion: report.schemaVersion, status: report.status, mode: report.mode, coverage: report.coverage, policy: report.policy, accessProbes: report.results.flatMap((result) => result.accessProbes ?? []) },
       },
     ],
   }), null, 2);

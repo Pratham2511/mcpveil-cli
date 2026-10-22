@@ -5,7 +5,7 @@ import {
   ReadResourceRequestSchema, ListPromptsRequestSchema, GetPromptRequestSchema,
   McpError, ErrorCode,
 } from '@modelcontextprotocol/sdk/types.js';
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, readFileSync } from 'node:fs';
 
 const mode = process.argv[2] || 'echo';
 const eventsFile = process.argv[3];
@@ -37,6 +37,12 @@ const tool = {
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   event({ event: 'list-tools' });
   if (mode === 'inventory-hang') await new Promise(() => {});
+  if (mode === 'duplicate-tools') return { tools: [tool, tool] };
+  if (mode === 'many-tools') return { tools: Array.from({length:1001}, (_,i)=>({...tool,name:'tool'+i})) };
+  if (mode === 'cursor-loop') return { tools: [tool], nextCursor: 'repeated-cursor' };
+  if (mode === 'drift') return { tools: JSON.parse(readFileSync(process.argv[4], 'utf8')).tools };
+  if (mode === 'recursive-schema') return { tools: [{ ...tool, inputSchema: { type:'object', properties:{ next:{$ref:'#/$defs/r'} }, $defs:{ r:{ type:'object',properties:{ next:{$ref:'#/$defs/r'} } } } } }] };
+  if (mode === 'malformed-inventory') { process.stdout.write('{"jsonrpc":"2.0","result":[]}\n'); await new Promise(()=>{}); }
   return { tools: mode === 'surfaces' ? [] : [tool] };
 });
 server.setRequestHandler(ListResourcesRequestSchema, async () => ({ resources: mode === 'surfaces' ? [{
@@ -54,6 +60,8 @@ server.setRequestHandler(GetPromptRequestSchema, async () => {
 server.setRequestHandler(CallToolRequestSchema, async ({ params }) => {
   event({ event: 'call', name: params.name, args: params.arguments });
   if (mode === 'errors') throw new McpError(ErrorCode.InternalError, 'AUDIT_SIMULATED_CALL_FAILURE');
+  if (mode === 'huge-content') return { content: [{type:'text', text:'x'.repeat(25000)}] };
+  if (mode === 'oversized-wire') return { content: [{type:'text', text:'x'.repeat(3*1024*1024)}] };
   if (mode === 'hang') await new Promise(() => {});
   if (mode === 'secret') return { content: [{ type: 'text', text: 'Synthetic credential: ' + fakeToken }] };
   if (mode === 'structured-secret') return { content: [], structuredContent: { token: fakeToken } };

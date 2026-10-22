@@ -40,3 +40,13 @@ it.each([
   expect(report.score?.grade).toBe("A");
   expect(report.serverInfo?.name).toBe("mcpveil-safe");
 });
+
+it("auto-negotiates a legacy HTTP server and preserves explicit pinned-modern failure", () => {
+  for (const path of ["/mcp", "/sse"]) {
+    const result = spawnSync(runtime, [join(process.cwd(), "dist/cli.js"), "scan", "--url", `http://127.0.0.1:8123${path}`, "--protocol", "auto", "--yes", "--format", "json", "--timeout", "1000"], { encoding: "utf8", timeout: 15000 });
+    expect(result.status, result.stderr + result.stdout).toBe(0);
+    expect(JSON.parse(result.stdout).protocolEra).toBe("legacy");
+  }
+  const pinned = spawnSync(runtime, [join(process.cwd(), "dist/cli.js"), "scan", "--url", "http://127.0.0.1:8123/mcp", "--protocol", "2026-07-28", "--yes", "--format", "json", "--timeout", "1000"], { encoding: "utf8", timeout: 15000 });
+  expect(pinned.status).toBe(2);
+});

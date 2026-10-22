@@ -7,3 +7,6 @@ export { renderJson } from "./report/json.js";
 export { renderSarif } from "./report/sarif.js";
 export { renderTerminal } from "./report/terminal.js";
 export type * from "./types.js";
+
+export { createBaseline, applyBaseline, loadBaseline, createSnapshot, compareSnapshot, loadSnapshot } from "./policy.js";
+export type { Baseline, ToolSnapshot } from "./policy.js";

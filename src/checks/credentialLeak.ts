@@ -1,3 +1,4 @@
+import { containsSuppliedSecret } from "../utils/redact.js";
 import { flattenProperties } from "../engine/schema.js";
 import type { ScanContext } from "../engine/scanner.js";
 import { analyze } from "../engine/analyzer.js";
@@ -68,6 +69,10 @@ interface ScanSource { tool?: string; resource?: string; kind: string; payload?:
 
 function scanText(ctx: ScanContext, source: ScanSource, text: string): void {
   if (!text) return;
+  if (containsSuppliedSecret(text)) ctx.emit({ checkId: "credential-leak", tool: source.tool, resource: source.resource,
+    payload: source.payload ?? "supplied-credential", evidence: `${source.kind}: explicitly supplied credential appeared in response (value omitted)`,
+    severity: "high", confidence: "confirmed", title: "Supplied test credential exposed by server", remediation: REMEDIATION,
+    fingerprint: fingerprint(["credential-leak", source.tool, source.resource, "supplied-credential", source.payload]) });
   const matchedRanges: [number, number][] = [];
   for (const sp of SECRET_PATTERNS) {
     const m = text.match(sp.regex);

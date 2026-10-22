@@ -5,7 +5,7 @@ Requires a built checkout. No synthetic terminal output or real credentials.
 """
 import codecs, fcntl, json, os, pty, select, struct, subprocess, termios, time
 from pathlib import Path
-width,height=106,34
+width,height=106,36
 out=Path('assets/demo.cast')
 commands=[
  ('node dist/cli.js doctor', ['node','dist/cli.js','doctor']),

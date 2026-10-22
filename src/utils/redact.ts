@@ -29,6 +29,11 @@ export function registerSecrets(values: string[]): () => void {
   };
 }
 
+/** Detect supplied credentials in a response without exposing their values. */
+export function containsSuppliedSecret(text: string): boolean {
+  return [...registered.keys()].some((value) => value.length >= 6 && text.includes(value));
+}
+
 export function redactText(text: string): string {
   let safe = stripVTControlCharacters(text);
   for (const value of [...registered.keys()].sort((a, b) => b.length - a.length)) {
@@ -60,7 +65,7 @@ export function redactText(text: string): string {
   });
   safe = safe.replace(/([?&](?:access_token|api_key|token|password|secret|key)=)[^&#\s]*/gi, "$1[REDACTED]");
   safe = safe.replace(/(https?:\/\/)[^\s/@]+:[^\s/@]+@/gi, "$1[REDACTED]@");
-  safe = safe.replace(/((?:--?|\b)(?:password|passwd|secret|token|api[-_]?key|authorization|cookie)(?:[=:\s]+))[^\s"']+/gi, "$1[REDACTED]");
+  safe = safe.replace(/((?:--?(?:password|passwd|secret|token|api[-_]?key|authorization|cookie)[=:\s]+|\b(?:password|passwd|secret|token|api[-_]?key|authorization|cookie)[=:]\s*))[^\s"']+/gi, "$1[REDACTED]");
   return safe;
 }
 

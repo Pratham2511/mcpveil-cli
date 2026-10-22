@@ -1,5 +1,5 @@
-import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { McpError, ErrorCode, type CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import type { Client } from "@modelcontextprotocol/client";
+import { ProtocolError, ProtocolErrorCode, type CallToolResult } from "@modelcontextprotocol/client";
 
 export interface ToolCallOutcome {
   ok: boolean;
@@ -22,7 +22,7 @@ export async function callToolSafe(
 ): Promise<ToolCallOutcome> {
   const started = Date.now();
   try {
-    const result = await client.callTool({ name, arguments: args }, undefined, { timeout: timeoutMs, signal }) as CallToolResult;
+    const result = await client.request({ method: "tools/call", params: { name, arguments: args } }, { timeout: timeoutMs, signal }) as CallToolResult;
     const parts: string[] = [];
     for (const block of result.content) {
       if (block.type === "text") parts.push(block.text);
@@ -39,7 +39,7 @@ export async function callToolSafe(
       truncated: text.length > MAX_CAPTURE_CHARS,
     };
   } catch (err) {
-    if (err instanceof McpError && err.code === ErrorCode.InvalidParams) {
+    if (err instanceof ProtocolError && err.code === ProtocolErrorCode.InvalidParams) {
       return { ok: true, isError: true, text: failure(err), durationMs: Date.now() - started };
     }
     return { ok: false, isError: false, text: "", durationMs: Date.now() - started, error: failure(err) };
@@ -53,7 +53,7 @@ export async function readResourceSafe(
     const result = await client.readResource({ uri }, { timeout: timeoutMs, signal });
     const text = result.contents.map((content) => "text" in content ? content.text : `[blob ${content.uri}]`).join("\n");
     return { ok: true, text: text.slice(0, MAX_CAPTURE_CHARS), truncated: text.length > MAX_CAPTURE_CHARS };
-  } catch (err) { return { ok: false, text: "", error: failure(err), rejected: err instanceof McpError && [ErrorCode.InvalidParams, -32002].includes(err.code) }; }
+  } catch (err) { return { ok: false, text: "", error: failure(err), rejected: err instanceof ProtocolError && [ProtocolErrorCode.InvalidParams, -32002].includes(err.code) }; }
 }
 
 export async function getPromptSafe(

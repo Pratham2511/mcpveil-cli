@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0
+
+- Official stable SDK v2 client with explicit modern `2026-07-28`, auto and legacy modes; v1 retained only in compatibility fixtures.
+- Bearer/custom-header credentials via environment names; HTTPS credential policy, redirect/cross-origin denial, bounded HTTP/stdio messages, precise legacy fallback.
+- Optional required-auth and Origin admission probes with explicit verdicts; detection and masking of supplied opaque credentials.
+- Expiring target-scoped finding baselines, hashed tool drift snapshots, reusable GitHub Action and team CI examples.
+- Additional adversarial fixtures for malformed/duplicate/oversized inventories, recursive schemas, oversized content and authorization failures.
+
+
 ## 0.3.0
 
 - Bounded recursive argument planning with local references and required constrained siblings; nested SQL/SSRF payload handling corrected.

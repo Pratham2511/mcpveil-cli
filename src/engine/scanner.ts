@@ -1,3 +1,5 @@
+import { createSnapshot, compareSnapshot, type ToolSnapshot } from "../policy.js";
+import { writeFileSync } from "node:fs";
 import type { ForgeConfig, Inventory, ScanReport, ScanTarget, CheckResult, Finding, CheckId } from "../types.js";
 import type { ForgeSession } from "../transports/factory.js";
 import { inventory } from "./inventory.js";
@@ -15,6 +17,7 @@ export interface ScanContext {
   config: ForgeConfig;
   target: ScanTarget;
   active: boolean;
+  signal: AbortSignal;
   emit(f: Finding): void;
   results: Map<CheckId, CheckResult>;
   limit(id: CheckId, reason: string): void;
@@ -25,7 +28,7 @@ export interface ScanContext {
 
 function safeTarget(target: ScanTarget): ScanTarget {
   return redactValue({ kind: target.kind, ...(target.command ? { command: redactCommand(target.command) } : {}),
-    ...(target.url ? { url: target.url } : {}) });
+    ...(target.url ? { url: target.url, authPolicy: target.authPolicy, auditOrigin: target.auditOrigin } : {}), ...(target.protocolMode ? { protocolMode: target.protocolMode } : {}) });
 }
 
 export function failureReport(target: ScanTarget, error: string, active = true, startedAt = new Date().toISOString()): ScanReport {
@@ -39,7 +42,7 @@ export function failureReport(target: ScanTarget, error: string, active = true, 
 
 export async function runScan(
   session: ForgeSession, target: ScanTarget, rawConfig: ForgeConfig,
-  opts: { active?: boolean; signal?: AbortSignal } = {},
+  opts: { active?: boolean; signal?: AbortSignal; targetId?: string; snapshot?: ToolSnapshot; writeSnapshot?: string } = {},
 ): Promise<ScanReport> {
   const config = validateConfig(rawConfig);
   const active = opts.active ?? true;
@@ -49,6 +52,14 @@ export async function runScan(
   let inv: Inventory;
   try { inv = await inventory(session.client, { timeoutMs: config.timeoutMs, signal }); }
   catch (err) { return failureReport(target, `inventory failed: ${err instanceof Error ? err.message : String(err)}`, active, startedAt); }
+  let drift: ScanReport["policy"];
+  try {
+    if (opts.snapshot) drift = { drift: compareSnapshot(opts.snapshot, inv, safeTarget(target), opts.targetId ?? "") };
+    if (opts.writeSnapshot) {
+      if (inv.errors?.length) throw new Error("cannot snapshot an incomplete inventory");
+      writeFileSync(opts.writeSnapshot, JSON.stringify(createSnapshot(inv, safeTarget(target), opts.targetId ?? ""), null, 2) + "\n", { mode: 0o600 });
+    }
+  } catch (err) { return failureReport(target, `tool snapshot policy failed: ${err instanceof Error ? err.message : String(err)}`, active, startedAt); }
   const excludedTools = inv.tools.filter((tool) => isExcluded(tool.name, config.allowTools)).map((tool) => tool.name);
   log.info(`inventory: ${inv.tools.length} tools (${excludedTools.length} excluded from active calls), ${inv.resources.length} resources, ${inv.prompts.length} prompts`);
   const findings: Finding[] = [];
@@ -68,7 +79,7 @@ export async function runScan(
     return outcome;
   };
   const ctx: ScanContext = {
-    session, inv, config, target, active, results, limit, emit: (finding) => findings.push(finding),
+    session, inv, config, target, active, signal, results, limit, emit: (finding) => findings.push(finding),
     async invokeTool(id, name, args) {
       const skipped = !active ? "inventory-only" : isExcluded(name, config.allowTools) ? "excluded via policy" : undefined;
       if (skipped) return { ok: false, isError: false, text: "", durationMs: 0, skipped };
@@ -120,7 +131,7 @@ export async function runScan(
     catch (err) { result.errors.push(`check failed: ${err instanceof Error ? err.message : String(err)}`); }
     result.findings = findings.slice(before);
   }
-  const enabledActive = CHECKS.some((check) => check.meta.id !== "prompt-injection" && config.checks[check.meta.id] !== false);
+  const enabledActive = CHECKS.some((check) => !["prompt-injection", "transport-security"].includes(check.meta.id) && config.checks[check.meta.id] !== false);
   const untestedTools = active && enabledActive ? inv.tools.filter((tool) => !excludedTools.includes(tool.name) && !toolCalls[tool.name]).map((tool) => tool.name) : [];
   const limitations = [...new Set([
     ...[...results.values()].flatMap((result) => result.limitations ?? []),
@@ -134,8 +145,8 @@ export async function runScan(
   latencies.sort((a, b) => a - b);
   const latencyMs = { samples: latencies.length, p50: latencies[Math.max(0, Math.ceil(latencies.length * 0.50) - 1)] ?? 0, p95: latencies[Math.max(0, Math.ceil(latencies.length * 0.95) - 1)] ?? 0 };
   return redactValue({
-    schemaVersion: "2.0", status, mode: active ? "active" : "inventory", errors,
-    target: safeTarget(target), serverInfo: inv.serverInfo, startedAt, durationMs: Date.now() - Date.parse(startedAt),
+    schemaVersion: "2.0", status, policy: drift, mode: active ? "active" : "inventory", errors,
+    target: safeTarget(target), serverInfo: inv.serverInfo, protocolEra: inv.protocolEra, startedAt, durationMs: Date.now() - Date.parse(startedAt),
     inventorySizes: { tools: inv.tools.length, resources: inv.resources.length, prompts: inv.prompts.length },
     coverage: { excludedTools, untestedTools, limitations, toolCalls, resourceReads, latencyMs },
     results: [...results.values()], findings: deduped,

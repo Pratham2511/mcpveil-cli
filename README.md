@@ -54,6 +54,7 @@ and [capture script](scripts/record-demo.py) are reproducible; no real credentia
 | SQL injection | Paired read-only true/false conditions compared with a benign baseline; SQL error text is suspicious rather than confirmed |
 | SSRF | Response markers from loopback, metadata, or file targets; blind out-of-band callbacks are not verified |
 | Credential exposure | Secret-shaped data in metadata, resource/prompt contents, and textual or structured tool responses |
+| HTTP access policy | Optional required-auth and untrusted-Origin connection/discovery probes; public endpoints are not automatically labeled insecure |
 | Prompt injection | Known override phrases and invisible Unicode in tool/schema metadata, resources, prompts, and server instructions |
 
 These are bounded checks, not a proof that a server or an agent is secure.
@@ -195,9 +196,77 @@ JSON Schema coverage or that every generated request will be accepted.
 - Stdio credentials need explicit `--env` forwarding or API `target.env`.
 - Keep report consumers aware of assessment status before interpreting a grade.
 
-The bundled SDK currently negotiates legacy MCP revisions through 2025-11-25.
-Current-protocol compatibility is tracked separately and is not implied by a
-successful connection to a legacy-compatible server.
+The official SDK v2 client supports legacy MCP and the modern `2026-07-28`
+revision. Legacy negotiation remains the default for predictable CLI startup:
+
+```bash
+# Explicit discovery negotiation, including legacy fallback.
+mcpveil scan --stdio "node test-server.js" --protocol auto --yes
+# Require a modern server; a legacy-only server fails visibly.
+mcpveil scan --url http://127.0.0.1:8123/mcp --protocol 2026-07-28 --yes
+```
+
+Auto negotiation may launch a disposable sibling stdio process to identify the
+era. It can start target code twice. Modern multi-round-trip sampling/elicitation
+is not fulfilled automatically; interactive outcomes remain incomplete. Scanner
+requests validate protocol result shapes, while arbitrary server-provided JSON
+output schemas are not compiled or used to execute regexes. This is a content
+security scanner, not an output-contract validator. HTTP/SSE responses and stdio
+messages are bounded to 2 MiB; captured content is capped at 20,000 characters.
+
+## Authenticated HTTP
+
+```bash
+# Set these variables securely in your shell/CI secret store; do not put values in argv.
+mcpveil scan --url https://mcp.example.invalid/mcp --yes \
+  --bearer-env MCP_TEST_TOKEN --header-env X-Api-Key=MCP_TEST_API_KEY \
+  --auth-policy required --check-origin --protocol auto
+```
+
+`--auth-policy required` checks anonymous and invalid-credential connection attempts.
+`--auth-policy public` records an intentional deployment choice; absence of an auth
+flag makes no authentication claim. `--check-origin` tests one untrusted Origin.
+Access probes do not invoke tools. JSON/SARIF record accepted/rejected/unverified
+verdicts. These checks cover connection/discovery admission, not per-tool roles,
+OAuth issuer/audience/scope compliance, mTLS or identity-provider configuration.
+
+Credentials are resolved by environment variable name and omitted from reports.
+HTTP credentials require HTTPS, with a loopback exception for local fixtures.
+Redirects and cross-origin SSE endpoints are blocked. Use the final endpoint URL.
+Auth denials and server errors do not trigger a permissive legacy fallback.
+API callers can set `target.bearerEnv`, `target.headerEnv`, or `target.headers`;
+prefer environment names to reduce accidental credential persistence.
+
+## Reviewed baselines and tool drift
+
+```bash
+mcpveil scan --stdio "node test-server.js" --yes --format json -o report.json
+# Review the evidence first. Use an explicit future ISO timestamp.
+mcpveil baseline create --report report.json --target-id staging-reader \
+  --reason "Reviewed temporary exception" --expires "$(node -p 'new Date(Date.now()+7*86400000).toISOString()')" -o baseline.json
+mcpveil scan --stdio "node test-server.js" --yes \
+  --baseline baseline.json --target-id staging-reader
+
+# Metadata-only tool snapshot; no tool invocations.
+mcpveil scan --stdio "node test-server.js" --inventory-only --yes \
+  --target-id staging-reader --write-snapshot tools.snapshot.json
+mcpveil scan --stdio "node test-server.js" --inventory-only --yes \
+  --target-id staging-reader --snapshot tools.snapshot.json
+```
+
+Keep baseline expirations short. Use a distinct target ID per server, deployment
+and authorization context. Baselines bind to that ID and the exact command/URL;
+changes require review. They retain all findings and the original risk score,
+mark accepted signals, and gate on new ones. Severity/confidence changes cannot
+reuse acceptance. Incomplete scans still exit 2. Expired/mismatched artifacts are
+rejected before target startup. Baselines are local review artifacts, not signed
+attestations; protect their review and storage in your repository.
+
+Snapshots store SHA-256 hashes of tool names, descriptions and schemas. Tool
+additions/removals/changes exit 1 even with `--fail-on never`. No description text
+is stored, but hashes are change detectors, not encryption for low-entropy data.
+They do not attest publisher identity or prevent a server changing after the scan.
+See [team CI examples](docs/team-ci.md) and the reusable [GitHub Action](action.yml).
 
 ## Ecosystem and roadmap
 

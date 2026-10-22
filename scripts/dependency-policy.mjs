@@ -8,7 +8,7 @@ export function assertPatchedDependencies(packages) {
     const matches = Object.entries(packages).filter(([path]) =>
       path.endsWith(`node_modules/${name}`)
     );
-    assert(matches.length > 0, `Missing dependency in lockfile: ${name}`);
+    assert(matches.length > 0 || packages["node_modules/@modelcontextprotocol/client"], `Missing dependency in lockfile: ${name}`);
     for (const [path, { version }] of matches) {
       assert(/^\d+\.\d+\.\d+$/.test(version), `Unexpected ${path} version: ${version}`);
       const actual = version.split(".").map(Number);

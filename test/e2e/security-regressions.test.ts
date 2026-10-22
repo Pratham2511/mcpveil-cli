@@ -144,3 +144,18 @@ it("does not claim unverified collaborator callbacks or echo-based SSRF", () => 
   expect(result.report!.findings.some((finding) => finding.checkId === "ssrf")).toBe(false);
   expect(result.report!.coverage.limitations.join(" ")).toContain("callbacks are not verified");
 });
+
+it("rejects hostile inventories, recursive schemas, and oversized or malformed wire data", () => {
+  for (const mode of ["duplicate-tools", "many-tools", "cursor-loop", "malformed-inventory", "recursive-schema", "huge-content", "oversized-wire"]) {
+    const result = scan(mode, [], { maxCallsPerTool: 1 });
+    expect(result.status, `${mode}: ${result.stderr}`).toBe(2);
+    expect(result.report!.score).toBeNull();
+    expect(result.report!.status).not.toBe("complete");
+  }
+});
+it("forwards synthetic stdio credentials only after explicit selection by name", () => {
+  const result = scan("echo", ["--env", "AUDIT_PARENT_SECRET"]);
+  expect(result.status).toBe(0);
+  expect(result.events[0].inheritedSyntheticSecret).toBe(true);
+  expect(result.body).not.toContain("synthetic-parent-secret-only");
+});
