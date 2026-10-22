@@ -6,7 +6,8 @@ export type CheckId =
   | "sql-injection"
   | "ssrf"
   | "credential-leak"
-  | "prompt-injection";
+  | "prompt-injection"
+  | "transport-security";
 
 export type TransportKind = "stdio" | "streamable-http" | "sse";
 
@@ -20,6 +21,13 @@ export interface ScanTarget {
   env?: Record<string, string>;
   /** Explicitly forward these environment variables. Other credentials are not inherited. */
   inheritEnv?: string[];
+  /** HTTP credentials are resolved at connection time, never stored in reports. */
+  bearerEnv?: string;
+  headerEnv?: Record<string, string>;
+  headers?: Record<string, string>;
+  authPolicy?: "required" | "public";
+  auditOrigin?: boolean;
+  protocolMode?: "legacy" | "auto" | "2026-07-28";
 }
 
 export interface ToolSchemaProperty {
@@ -64,6 +72,7 @@ export interface Inventory {
   resources: ResourceInfo[];
   prompts: { name: string; description?: string; arguments?: { name: string; required?: boolean }[] }[];
   serverInfo?: { name?: string; version?: string };
+  protocolEra?: "legacy" | "modern";
   instructions?: string;
   errors?: string[];
 }
@@ -80,6 +89,7 @@ export interface Finding {
   remediation: string;
   /** stable hash for baseline suppression: sha256(checkId|tool|payload|resource) */
   fingerprint: string;
+  baselineState?: "accepted" | "new";
 }
 
 export interface CheckMeta {
@@ -99,6 +109,7 @@ export interface CheckResult {
   skipped?: string;         // reason if check did not run
   limitations?: string[];
   resourceReads?: number;
+  accessProbes?: { name: string; outcome: "accepted" | "rejected" | "unverified" }[];
 }
 
 export interface ScanReport {
@@ -116,6 +127,7 @@ export interface ScanReport {
   };
   target: ScanTarget;
   serverInfo?: { name?: string; version?: string };
+  protocolEra?: "legacy" | "modern";
   startedAt: string;
   durationMs: number;
   inventorySizes: { tools: number; resources: number; prompts: number };
@@ -124,6 +136,7 @@ export interface ScanReport {
   /** No security grade is assigned to incomplete or metadata-only assessments. */
   score: { value: number; grade: "A" | "B" | "C" | "D" | "F" } | null;
   mcpveilVersion: string;
+  policy?: { baseline?: { accepted: number; total: number }; drift?: { added: string[]; removed: string[]; changed: string[] } };
 }
 
 export interface ForgeConfig {

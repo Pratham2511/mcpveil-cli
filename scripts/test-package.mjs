@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -62,6 +62,19 @@ try {
     assert.equal(defaultConfig().failOn, 'high');
     assert.equal(FORGE_CLIENT_VERSION, '${manifest.version}');
   `]);
+  // Exercise the shipped Action launcher against this exact installed tarball.
+  const runner = join(scratch, "runner");
+  const actionPrefix = join(runner, "mcpveil-action");
+  mkdirSync(actionPrefix, { recursive: true });
+  symlinkSync(join(scratch, "node_modules"), join(actionPrefix, "node_modules"), "junction");
+  const actionOutput = join(runner, "outputs.txt");
+  run(runtime, [join(root, "scripts/action.mjs")], root, { ...process.env,
+    RUNNER_TEMP: runner, GITHUB_OUTPUT: actionOutput, MCPVEIL_ACTION_AUTHORIZED: "true",
+    MCPVEIL_ACTION_STDIO: `${JSON.stringify(runtime)} ${JSON.stringify(join(root, "test/fixtures/security-cases.mjs"))} echo`,
+    MCPVEIL_ACTION_HEADERS: "{}", MCPVEIL_ACTION_PROTOCOL: "legacy" });
+  const actionFiles = Object.fromEntries(readFileSync(actionOutput, "utf8").trim().split("\n").map((line) => line.split("=")));
+  assert.equal(JSON.parse(readFileSync(actionFiles.json, "utf8")).status, "complete");
+  assert.equal(JSON.parse(readFileSync(actionFiles.sarif, "utf8")).version, "2.1.0");
   console.log(`Packed ${manifest.name}@${manifest.version}: CLI, API, and patched installed dependencies verified on ${run(runtime, ["--version"]).trim()}.`);
 } finally {
   rmSync(scratch, { recursive: true, force: true });

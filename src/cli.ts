@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createBaseline, applyBaseline, validateBaselineTarget, targetScope, loadBaseline, loadSnapshot, readArtifact } from "./policy.js";
 import { Command, Option, InvalidArgumentError, CommanderError } from "commander";
 import { writeFileSync } from "node:fs";
 import { loadConfig, validateConfig, CHECK_IDS } from "./config/loader.js";
@@ -10,6 +11,7 @@ import { renderSarif } from "./report/sarif.js";
 import type { ScanTarget, TransportKind, Severity, ForgeConfig, ScanReport } from "./types.js";
 import { log } from "./utils/logger.js";
 import { redactText } from "./utils/redact.js";
+import { resolveHeaders, validateEndpoint } from "./transports/http.js";
 import { doctor } from "./doctor.js";
 import { VERSION } from "./version.js";
 
@@ -17,6 +19,9 @@ export const EXIT = { CLEAN: 0, POLICY_FAIL: 1, SCAN_FAIL: 2, USAGE: 3 } as cons
 const SEVERITIES: Severity[] = ["info", "low", "medium", "high", "critical"];
 class UsageError extends Error {}
 interface CliOpts {
+  authPolicy?: "required" | "public"; checkOrigin?: boolean;
+  baseline?: string; targetId?: string; snapshot?: string; writeSnapshot?: string;
+  bearerEnv?: string; headerEnv?: string[]; protocol?: "legacy" | "auto" | "2026-07-28";
   stdio?: string; url?: string; transport?: TransportKind; config?: string;
   format?: "terminal" | "json" | "sarif"; output?: string; failOn?: Severity | "never";
   timeout?: number; scanTimeout?: number; maxCallsPerTool?: number;
@@ -46,10 +51,30 @@ program.command("doctor").description("Check setup without starting or contactin
     } catch (err) { log.error(err instanceof Error ? err.message : String(err)); process.exitCode = 3; }
   });
 
+program.command("baseline").description("Reviewable expiring finding acceptance")
+  .command("create").requiredOption("--report <path>", "complete active JSON report")
+  .requiredOption("--target-id <id>", "logical server and authorization context")
+  .requiredOption("--reason <reason>", "review justification")
+  .requiredOption("--expires <iso-date>", "ISO 8601 expiration")
+  .requiredOption("-o, --output <path>", "baseline destination")
+  .action((opts) => {
+    try { writeFileSync(opts.output, JSON.stringify(createBaseline(readArtifact(opts.report) as ScanReport, opts.targetId, opts.reason, opts.expires), null, 2) + "\n", { mode: 0o600 }); }
+    catch (err) { log.error(err instanceof Error ? err.message : String(err)); process.exitCode = EXIT.USAGE; }
+  });
+
 program.command("scan").description("Scan an explicitly authorized MCP server")
   .option("--stdio <command>", "launch an exact command through stdio (no shell)")
   .option("--url <url>", "HTTP target, with legacy SSE fallback")
   .addOption(new Option("--transport <kind>", "force a transport").choices(["stdio", "streamable-http", "sse"]))
+  .addOption(new Option("--auth-policy <policy>", "explicit HTTP deployment expectation").choices(["required", "public"]))
+  .option("--check-origin", "test rejection of an untrusted HTTP Origin")
+  .option("--baseline <path>", "apply an expiring target-scoped reviewed baseline")
+  .option("--target-id <id>", "logical server and authorization context for policy artifacts")
+  .option("--snapshot <path>", "compare hashed tool descriptions/schemas; drift exits 1")
+  .option("--write-snapshot <path>", "save hashed tools from complete inventory")
+  .option("--bearer-env <name>", "HTTP bearer token read from an environment variable")
+  .option("--header-env <header=variable>", "HTTP header read from an environment variable (repeatable)", (v: string, previous: string[]) => [...previous, v], [])
+  .addOption(new Option("--protocol <mode>", "legacy, explicit negotiation, or pinned modern protocol").choices(["legacy", "auto", "2026-07-28"]))
   .option("-c, --config <path>", "JSON configuration")
   .addOption(new Option("--format <format>", "report format").choices(["terminal", "json", "sarif"]))
   .option("-o, --output <path>", "report destination")
@@ -72,6 +97,12 @@ async function scanAction(opts: CliOpts): Promise<number> {
   if ((opts.stdio && opts.transport && opts.transport !== "stdio") || (opts.url && opts.transport === "stdio")) {
     throw new UsageError("transport must match the selected stdio or URL target");
   }
+  let baseline; let snapshot;
+  try {
+    baseline = opts.baseline ? loadBaseline(opts.baseline) : undefined;
+    snapshot = opts.snapshot ? loadSnapshot(opts.snapshot) : undefined;
+    if ((baseline || snapshot || opts.writeSnapshot) && !opts.targetId?.trim()) throw new Error("--target-id is required for baselines and tool snapshots");
+  } catch (err) { throw new UsageError(err instanceof Error ? err.message : String(err)); }
   let config: ForgeConfig;
   try {
     config = loadConfig(opts.config);
@@ -93,6 +124,8 @@ async function scanAction(opts: CliOpts): Promise<number> {
     if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key) || process.env[key] === undefined) throw new UsageError(`environment variable unavailable or invalid: ${key}`);
   }
   let target: ScanTarget;
+  if (opts.stdio && (opts.bearerEnv || opts.headerEnv?.length || opts.authPolicy || opts.checkOrigin)) throw new UsageError("HTTP credentials require --url");
+  if (opts.transport === "sse" && opts.protocol && opts.protocol !== "legacy") throw new UsageError("legacy SSE requires --protocol legacy");
   if (opts.stdio) {
     const command = shellSplit(opts.stdio);
     if (!command[0]) throw new UsageError("stdio command is empty");
@@ -103,6 +136,22 @@ async function scanAction(opts: CliOpts): Promise<number> {
     if (!["https:", "http:"].includes(url.protocol) || url.username || url.password) throw new UsageError("use an HTTP(S) URL without embedded credentials");
     target = { kind: opts.transport === "sse" ? "sse" : "streamable-http", url: url.href };
   }
+  target.protocolMode = opts.protocol ?? "legacy";
+  if (opts.url) {
+    target.authPolicy = opts.authPolicy; target.auditOrigin = opts.checkOrigin;
+    target.bearerEnv = opts.bearerEnv;
+    target.headerEnv = Object.fromEntries((opts.headerEnv ?? []).map((pair) => {
+      const match = /^([!#$%&'*+.^_`|~0-9A-Za-z-]+)=([A-Za-z_][A-Za-z0-9_]*)$/.exec(pair);
+      if (!match) throw new UsageError("--header-env requires Header-Name=ENV_NAME");
+      return [match[1]!, match[2]!];
+    }));
+    try { validateEndpoint(new URL(target.url!), [...resolveHeaders(target)].length > 0); }
+    catch (err) { throw new UsageError(err instanceof Error ? err.message : String(err)); }
+  }
+  try {
+    if (baseline) validateBaselineTarget(baseline, target, opts.targetId!);
+    if (snapshot && snapshot.targetScope !== targetScope(target, opts.targetId!)) throw new Error("tool snapshot target scope mismatch");
+  } catch (err) { throw new UsageError(err instanceof Error ? err.message : String(err)); }
   if (!opts.yes) throw new UsageError("Use --yes to authorize this target. Stdio targets execute server code even in inventory-only mode; isolate untrusted servers.");
   let report: ScanReport;
   let session;
@@ -113,12 +162,17 @@ async function scanAction(opts: CliOpts): Promise<number> {
     output(report, config); return EXIT.SCAN_FAIL;
   }
   try {
-    report = await runScan(session, target, config, { active: !opts.inventoryOnly, signal });
+    report = await runScan(session, target, config, { active: !opts.inventoryOnly, signal, targetId: opts.targetId, snapshot, writeSnapshot: opts.writeSnapshot });
+    if (baseline) {
+      try { report = applyBaseline(report, baseline, opts.targetId!); }
+      catch (err) { throw new UsageError(err instanceof Error ? err.message : String(err)); }
+    }
     output(report, config);
     if (report.status !== "complete") return EXIT.SCAN_FAIL;
+    if (report.policy?.drift && Object.values(report.policy.drift).some((items) => items.length)) return EXIT.POLICY_FAIL;
     if (config.failOn === "never") return EXIT.CLEAN;
     const threshold = SEVERITIES.indexOf(config.failOn);
-    return report.findings.some((finding) => SEVERITIES.indexOf(finding.severity) >= threshold) ? EXIT.POLICY_FAIL : EXIT.CLEAN;
+    return report.findings.some((finding) => finding.baselineState !== "accepted" && SEVERITIES.indexOf(finding.severity) >= threshold) ? EXIT.POLICY_FAIL : EXIT.CLEAN;
   } finally { await session.close().catch(() => {}); }
 }
 

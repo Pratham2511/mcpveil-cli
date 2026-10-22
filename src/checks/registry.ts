@@ -1,3 +1,4 @@
+import { runTransportSecurity } from "./transportSecurity.js";
 import type { CheckMeta, CheckId } from "../types.js";
 import { runPathTraversal } from "./pathTraversal.js";
 import { runCommandInjection, runSqlInjection } from "./injection.js";
@@ -60,6 +61,7 @@ export const PROMPT_INJECTION_META: CheckMeta = {
 };
 
 export const CHECKS: CheckRunner[] = [
+  { meta: { id: "transport-security", title: "HTTP access policy", description: "Explicit anonymous/invalid-credential and untrusted Origin connection probes; tool-level authorization and OAuth conformance are outside this check.", active: true, defaultSeverity: "high" }, run: runTransportSecurity },
   { meta: PATH_TRAVERSAL_META, run: runPathTraversal },
   { meta: COMMAND_INJECTION_META, run: runCommandInjection },
   { meta: SQL_INJECTION_META, run: runSqlInjection },

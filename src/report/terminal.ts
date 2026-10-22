@@ -57,6 +57,9 @@ export function renderTerminal(report: ScanReport): string {
   } else lines.push("\nPosture score: ungraded (incomplete or metadata-only assessment)");
   for (const error of report.errors ?? []) lines.push(`Error: ${error}`);
   for (const limitation of report.coverage?.limitations ?? []) lines.push(`Untested: ${limitation}`);
+  for (const probe of report.results.flatMap((result) => result.accessProbes ?? [])) lines.push(`Access probe ${probe.name}: ${probe.outcome}`);
+  if (report.policy?.baseline) lines.push(`Reviewed baseline: ${report.policy.baseline.accepted}/${report.policy.baseline.total} signals accepted; underlying score retains all risks.`);
+  if (report.policy?.drift) lines.push(`Tool drift: ${report.policy.drift.added.length} added, ${report.policy.drift.removed.length} removed, ${report.policy.drift.changed.length} changed (hashes in JSON).`);
   lines.push("");
   return lines.join("\n");
 }

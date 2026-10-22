@@ -2,9 +2,9 @@
  * ACCURACY HARNESS — the product.
  *
  * Gates CI on scanner accuracy measured against two reference servers:
- *   • vulnerable-server: every one of the six checks must fire (recall = 100%),
+ *   • vulnerable-server: every one of the six checks must fire (reference fixture coverage),
  *     with the headline findings CONFIRMED (not merely suspicious).
- *   • safe-server: zero confirmed findings (precision = 100%) and exit code 0.
+ *   • safe-server: zero confirmed findings (reference safe control) and exit code 0.
  *   • determinism: two consecutive scans of the same target produce the exact
  *     same finding fingerprint set.
  *
@@ -70,7 +70,7 @@ function fingerprints(findings: Finding[]): string[] {
 }
 
 describe("accuracy harness (the CI gate)", () => {
-  it("vulnerable server: every core check fires with confirmed evidence (recall = 100%)", () => {
+  it("vulnerable server: every core check fires with confirmed evidence (reference fixture coverage)", () => {
     const { status, report, stderr } = scan(VULN_SERVER);
 
     // exit code contract: findings at/above default --fail-on high → 1
@@ -115,7 +115,7 @@ describe("accuracy harness (the CI gate)", () => {
     expect(report.score.grade).toBe("F");
   }, 200_000);
 
-  it("safe server: zero confirmed findings and clean exit (precision = 100%)", () => {
+  it("safe server: zero confirmed findings and clean exit (reference safe control)", () => {
     const { status, report, stderr } = scan(SAFE_SERVER);
 
     const confirmed = report.findings.filter((f) => f.confidence === "confirmed");
