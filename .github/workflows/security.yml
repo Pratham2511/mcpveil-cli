@@ -22,7 +22,7 @@ jobs:
         run: |
           node dist/cli.js scan \
             --stdio "node_modules/.bin/tsx test/safe-server/index.ts" \
-            --format sarif -o mcpveil.sarif --yes || true
+            --format sarif -o mcpveil.sarif --yes
       - name: Upload SARIF to Code Scanning
         uses: github/codeql-action/upload-sarif@v4
         if: always()

@@ -17,6 +17,19 @@ export async function runPromptInjection(ctx: ScanContext): Promise<void> {
   }
   for (const prompt of inv.prompts) {
     if (prompt.description) inspect(ctx, { tool: undefined, kind: `prompt '${prompt.name}'` }, prompt.description);
+    if (ctx.active) {
+      const args = Object.fromEntries((prompt.arguments ?? []).filter((arg) => arg.required).map((arg) => [arg.name, "mcpveil"]));
+      const response = await ctx.getPrompt("prompt-injection", prompt.name, args);
+      if (response.ok) inspect(ctx, { kind: `prompt '${prompt.name}' content` }, response.text);
+    }
+  }
+  if (inv.instructions) inspect(ctx, { kind: "server instructions" }, inv.instructions);
+  for (const resource of inv.resources) {
+    if (resource.description) inspect(ctx, { kind: `resource '${resource.uri}' description` }, resource.description);
+    if (ctx.active) {
+      const response = await ctx.readResource("prompt-injection", resource.uri);
+      if (response.ok) inspect(ctx, { kind: `resource '${resource.uri}' content` }, response.text);
+    }
   }
 }
 

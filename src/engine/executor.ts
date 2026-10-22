@@ -1,91 +1,71 @@
 import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { McpError, ErrorCode, type CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
 export interface ToolCallOutcome {
   ok: boolean;
   isError: boolean;
-  text: string;          // concatenated text content, capped
-  structured?: unknown;  // structuredContent if present
+  text: string;
+  structured?: unknown;
   durationMs: number;
-  error?: string;        // transport/timeout error (ok=false)
+  error?: string;
+  skipped?: string;
+  truncated?: boolean;
 }
 
+export interface ReadOutcome { ok: boolean; text: string; error?: string; skipped?: string; truncated?: boolean; rejected?: boolean }
 const MAX_CAPTURE_CHARS = 20_000;
 
-function cap(s: string): string {
-  return s.length > MAX_CAPTURE_CHARS ? s.slice(0, MAX_CAPTURE_CHARS) : s;
-}
+function failure(err: unknown): string { return err instanceof Error ? err.message : String(err); }
 
-/**
- * Invoke a tool with a hard timeout. Never throws: returns outcome.
- * We deliberately do NOT reconnect inside the executor; the scanner decides
- * whether a timeout is fatal per-check.
- */
 export async function callToolSafe(
-  client: Client,
-  name: string,
-  args: Record<string, unknown>,
-  timeoutMs: number
+  client: Client, name: string, args: Record<string, unknown>, timeoutMs: number, signal?: AbortSignal,
 ): Promise<ToolCallOutcome> {
   const started = Date.now();
-  let timer: NodeJS.Timeout | undefined;
   try {
-    const timeout = new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(new Error(`timeout after ${timeoutMs}ms`)), timeoutMs);
-    });
-    const result = (await Promise.race([
-      client.callTool({ name, arguments: args }),
-      timeout,
-    ])) as any;
-
-    const textParts: string[] = [];
-    for (const block of result?.content ?? []) {
-      if (block?.type === "text" && typeof block.text === "string") textParts.push(block.text);
-      else if (block?.type === "resource") {
-        const r = block.resource ?? {};
-        if (typeof (r as any).text === "string") textParts.push((r as any).text);
-        else if (typeof (r as any).blob === "string") textParts.push(`[blob ${String((r as any).uri ?? "")}]`);
+    const result = await client.callTool({ name, arguments: args }, undefined, { timeout: timeoutMs, signal }) as CallToolResult;
+    const parts: string[] = [];
+    for (const block of result.content) {
+      if (block.type === "text") parts.push(block.text);
+      else if (block.type === "resource") {
+        if ("text" in block.resource) parts.push(block.resource.text);
+        else parts.push(`[blob ${block.resource.uri}]`);
       }
     }
+    if (result.structuredContent !== undefined) parts.push(JSON.stringify(result.structuredContent));
+    const text = parts.join("\n");
     return {
-      ok: true,
-      isError: Boolean(result?.isError),
-      text: cap(textParts.join("\n")),
-      structured: result?.structuredContent,
-      durationMs: Date.now() - started,
+      ok: true, isError: Boolean(result.isError), text: text.slice(0, MAX_CAPTURE_CHARS),
+      structured: result.structuredContent, durationMs: Date.now() - started,
+      truncated: text.length > MAX_CAPTURE_CHARS,
     };
-  } catch (err: any) {
-    return {
-      ok: false,
-      isError: false,
-      text: "",
-      durationMs: Date.now() - started,
-      error: err?.message ?? String(err),
-    };
-  } finally {
-    if (timer) clearTimeout(timer);
+  } catch (err) {
+    if (err instanceof McpError && err.code === ErrorCode.InvalidParams) {
+      return { ok: true, isError: true, text: failure(err), durationMs: Date.now() - started };
+    }
+    return { ok: false, isError: false, text: "", durationMs: Date.now() - started, error: failure(err) };
   }
 }
 
 export async function readResourceSafe(
-  client: Client,
-  uri: string,
-  timeoutMs: number
-): Promise<{ ok: boolean; text: string; error?: string }> {
-  let timer: NodeJS.Timeout | undefined;
+  client: Client, uri: string, timeoutMs: number, signal?: AbortSignal,
+): Promise<ReadOutcome> {
   try {
-    const timeout = new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(new Error(`timeout after ${timeoutMs}ms`)), timeoutMs);
-    });
-    const res = (await Promise.race([client.readResource({ uri }), timeout])) as any;
-    const texts: string[] = [];
-    for (const c of res?.contents ?? []) {
-      if (typeof c?.text === "string") texts.push(c.text);
-      else if (typeof c?.blob === "string") texts.push(`[blob ${String(c?.uri ?? "")}]`);
-    }
-    return { ok: true, text: cap(texts.join("\n")) };
-  } catch (err: any) {
-    return { ok: false, text: "", error: err?.message ?? String(err) };
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
+    const result = await client.readResource({ uri }, { timeout: timeoutMs, signal });
+    const text = result.contents.map((content) => "text" in content ? content.text : `[blob ${content.uri}]`).join("\n");
+    return { ok: true, text: text.slice(0, MAX_CAPTURE_CHARS), truncated: text.length > MAX_CAPTURE_CHARS };
+  } catch (err) { return { ok: false, text: "", error: failure(err), rejected: err instanceof McpError && [ErrorCode.InvalidParams, -32002].includes(err.code) }; }
+}
+
+export async function getPromptSafe(
+  client: Client, name: string, args: Record<string, string>, timeoutMs: number, signal?: AbortSignal,
+): Promise<ReadOutcome> {
+  try {
+    const result = await client.getPrompt({ name, arguments: args }, { timeout: timeoutMs, signal });
+    const text = result.messages.map(({ content }) => {
+      if (content.type === "text") return content.text;
+      if (content.type === "resource" && "text" in content.resource) return content.resource.text;
+      return "";
+    }).join("\n");
+    return { ok: true, text: text.slice(0, MAX_CAPTURE_CHARS), truncated: text.length > MAX_CAPTURE_CHARS };
+  } catch (err) { return { ok: false, text: "", error: failure(err) }; }
 }

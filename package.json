@@ -1,12 +1,12 @@
 {
   "name": "mcpveil-cli",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Deterministic security test suite for MCP servers: sends real payloads through live MCP sessions and confirms exploitability from responses. CI-native with SARIF 2.1.0 output for GitHub Code Scanning.",
   "type": "module",
   "license": "MIT",
   "author": "MCPVeil contributors",
   "engines": {
-    "node": ">=18.17.0"
+    "node": ">=22.12.0"
   },
   "bin": {
     "mcpveil": "bin/mcpveil.js"

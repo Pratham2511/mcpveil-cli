@@ -47,7 +47,7 @@ try {
   }
 
   writeFileSync(join(scratch, "package.json"), JSON.stringify({ name: "mcpveil-package-smoke", private: true, version: "0.0.0" }));
-  npm(["install", join(scratch, pack.filename), "--omit=dev", "--no-audit", "--no-fund"]);
+  npm(["install", join(scratch, pack.filename), "--engine-strict", "--omit=dev", "--no-audit", "--no-fund"]);
   const installed = join(scratch, "node_modules", manifest.name);
   const lock = JSON.parse(readFileSync(join(scratch, "package-lock.json"), "utf8"));
   assertPatchedDependencies(lock.packages);

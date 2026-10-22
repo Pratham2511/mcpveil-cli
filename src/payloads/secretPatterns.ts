@@ -21,6 +21,7 @@ export const SECRET_PATTERNS: SecretPattern[] = [
   { id: "basic-auth-url", name: "Credentials in URL", regex: /\bhttps?:\/\/[^/\s:]+:([^/\s@]{8,})@/, severity: "high", group: 1 },
   { id: "env-assignment", name: "Secret-looking env assignment", regex: /\b([A-Z_]*(?:PASSWORD|SECRET|TOKEN|API_KEY|PRIVATE_KEY)[A-Z_]*)\s*=\s*["']?([^\s"'{};]{8,})/, severity: "medium", group: 2 },
   { id: "db-uri", name: "Database connection URI", regex: /\b(mongodb(?:\+srv)?|postgres|postgresql|mysql|redis):\/\/[^\s'"]{8,}/, severity: "high" },
+  { id: "json-secret", name: "Secret-like JSON value", regex: /["'][A-Za-z0-9_-]*(?:password|passwd|secret|token|api[-_]?key|private[-_]?key)[A-Za-z0-9_-]*["']\s*:\s*["']([^"'\\]{8,})["']/i, severity: "medium", group: 1 },
 ];
 
 /** Hidden/invisible unicode used to smuggle prompt-injection text. */

@@ -1,13 +1,8 @@
 export const FORGE_CMD_MARKER = "MCPF0RGE_EXEC_7Q2K";
 
 /**
- * Command injection payloads. Each tries to produce a deterministic, harmless
- * marker in stdout so the analyzer can confirm execution without destructive ops.
- *
- * Design rule (echo-safety): every payload contains the literal text `echo <MARKER>`,
- * so a server that merely ECHOES the argument back never trips the success signal.
- * The signal regex only fires when MARKER appears WITHOUT `echo ` immediately
- * before it — i.e. when the marker was actually produced by a shell.
+ * Read-only POSIX probes encode the marker as octal bytes. Reflecting or
+ * normalizing the input cannot produce the decoded marker as an output line.
  */
 export interface InjectionPayload {
   arg: string;
@@ -16,19 +11,21 @@ export interface InjectionPayload {
 }
 
 export const COMMAND_INJECTION_PAYLOADS: InjectionPayload[] = [
-  { arg: "`echo ${M}`", kind: "command", note: "backtick substitution (executes even inside double quotes)" },
-  { arg: "$(echo ${M})", kind: "command", note: "dollar-paren substitution (executes even inside double quotes)" },
-  { arg: "; echo ${M}", kind: "command", note: "semicolon chain (unquoted concat)" },
-  { arg: "&& echo ${M}", kind: "command", note: "and chain" },
-  { arg: "| echo ${M}", kind: "command", note: "pipe" },
-  { arg: "\necho ${M}", kind: "command", note: "newline injection" },
-  { arg: "true; echo ${M}", kind: "command", note: "direct-exec style (payload IS the command)" },
-  { arg: "true && echo ${M}", kind: "command", note: "direct-exec and-chain" },
+  { arg: "`${M}`", kind: "command", note: "backtick substitution" },
+  { arg: "$(${M})", kind: "command", note: "dollar-paren substitution" },
+  { arg: "; ${M}", kind: "command", note: "semicolon chain" },
+  { arg: "&& ${M}", kind: "command", note: "and chain" },
+  { arg: "| ${M}", kind: "command", note: "pipe" },
+  { arg: "\n${M}", kind: "command", note: "newline injection" },
+  { arg: "true; ${M}", kind: "command", note: "direct command" },
+  { arg: "true && ${M}", kind: "command", note: "direct and-chain" },
 ];
 
 /** Expand the ${M} placeholder in every payload. */
 export function commandPayloadArgs(): string[] {
-  return COMMAND_INJECTION_PAYLOADS.map((p) => p.arg.replace(/\$\{M\}/g, FORGE_CMD_MARKER));
+  const encoded = [...FORGE_CMD_MARKER].map((char) => `\\${char.charCodeAt(0).toString(8)}`).join("");
+  const command = `printf '\\n${encoded}\\n'`;
+  return COMMAND_INJECTION_PAYLOADS.map((p) => p.arg.replace(/\$\{M\}/g, () => command));
 }
 
 /**
@@ -38,15 +35,12 @@ export function commandPayloadArgs(): string[] {
  * flag a server that simply reflects its input. A server that EXECUTED the
  * payload prints MARKER on its own (preceded by anything other than `echo `).
  */
-export const COMMAND_SIGNALS = [
-  new RegExp(`(?<!echo )${FORGE_CMD_MARKER}`),
-  /uid=\d+\([^)]*\)\s+gid=\d+/, // classic `id` output
-];
+export const COMMAND_SIGNALS = [new RegExp(`^${FORGE_CMD_MARKER}\\r?$`, "m")];
 
 export const SQL_INJECTION_PAYLOADS: InjectionPayload[] = [
-  { arg: "' OR '1'='1", kind: "sql", note: "tautology - all rows" },
-  { arg: "1' OR '1'='1' --", kind: "sql", note: "comment-out tautology" },
-  { arg: "'; DROP TABLE mcpveil_probe; --", kind: "sql", note: "stacked statement (detect via engine error)" },
+  { arg: "mcpveil_no_match' OR '1'='1' --", kind: "sql", note: "paired true condition" },
+  { arg: "mcpveil_no_match' AND '1'='2' --", kind: "sql", note: "paired false condition" },
+  { arg: "'; SELECT 1; --", kind: "sql", note: "read-only stacked statement" },
   { arg: "' UNION SELECT NULL, NULL --", kind: "sql", note: "union probe" },
   { arg: "\"; ", kind: "sql", note: "quote-break error probe" },
   { arg: "'", kind: "sql", note: "single quote error probe" },

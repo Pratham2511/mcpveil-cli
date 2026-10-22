@@ -1,324 +1,187 @@
 # MCPVeil
 
-**The deterministic security test suite for MCP servers.**
+**Local security regression tests for Model Context Protocol servers.**
 
-> Static scanners inspect what a server *advertises*. MCPVeil proves what a
-> server **does** — by sending real exploit payloads through live MCP tool
-> calls and confirming exploitability from the responses.
+MCPVeil connects to a real MCP server, inventories its metadata, and runs
+bounded security probes. It produces evidence, explicit coverage and completion
+status, JSON/SARIF reports, and exit codes for CI. Analysis runs locally without
+an LLM or analysis-service API key.
 
 [![npm](https://img.shields.io/npm/v/mcpveil-cli)](https://www.npmjs.com/package/mcpveil-cli)
-[![Code Scanning](https://img.shields.io/badge/Code%20Scanning-SARIF%202.1.0-blueviolet)](SECURITY.md)
-[![license](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
-[![Node](https://img.shields.io/badge/node-18%20%7C%2020%20%7C%2022-brightgreen)](./package.json)
+[![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Node](https://img.shields.io/badge/Node-22.12%2B%20%7C%2024-green)](package.json)
 
-![MCPVeil scanning the vulnerable reference server](assets/demo.gif)
+[CI](.github/workflows/ci.yml) · [Security](SECURITY.md) · [Release guide](docs/npm-release.md)
 
-[CI workflow](.github/workflows/ci.yml) · [Security workflow](.github/workflows/security.yml)
+## Install and scan
 
----
-
-## Why MCPVeil exists
-
-The MCP ecosystem has a testing gap shaped exactly like this tool:
-
-- **Snyk Agent Scan** (ex-mcp-scan/Invariant) reads tool descriptions and runs
-  static natural-language analysis. It never sends an exploit. It cannot tell
-  you whether the path-traversal it *suspects* is actually exploitable.
-- **NVIDIA SkillSpector** statically scans agent *skill packages* — not live
-  MCP servers — over 71 regex patterns.
-- **Tencent AI-Infra-Guard** is a heavyweight red-team platform (Docker +
-  server + fingerprinting) — great for a SOC, overkill for a repo's CI.
-- The academic tooling ([MCP Safety Audit](https://arxiv.org/abs/2504.03767))
-  is LLM-based: nondeterministic, slow, and not CI-gateable.
-
-Meanwhile the 2025 CVE wave —
-[CVE-2025-49596](https://nvd.nist.gov/vuln/detail/CVE-2025-49596) (MCP Inspector
-RCE) and [CVE-2025-6514](https://nvd.nist.gov/vuln/detail/CVE-2025-6514)
-(mcp-remote RCE) — made it painfully clear that MCP servers execute in
-privileged, file-and-network-reachable contexts.
-
-**MCPVeil is the only CI-native tool that actively verifies MCP server
-exploitability: deterministic payloads through real MCP sessions, SARIF for
-GitHub Code Scanning, exit codes for PR gating, and an accuracy harness that
-gates its own CI on 100% recall / 0 false positives.**
-
-No LLM. No Docker. `npx mcpveil-cli`.
-
-## Validated against real MCP servers
-
-MCPVeil is tested against the official `@modelcontextprotocol` servers people
-actually run — not just its own fixtures. Latest validation run (v0.1.0, full
-active testing):
-
-| Server | Tools | Active invocations | Findings | False positives | Crashes |
-| --- | --: | --: | --: | --: | --: |
-| `server-filesystem` | 14 | 504 | 0 | 0 | 0 |
-| `server-github` | 26 (12 write tools excluded) | 713 | 0 | 0 | 0 |
-| `server-memory` | 9 | 324 | 0 | 0 | 0 |
-| `server-puppeteer` | 7 | 323 | 0 | 0 | 0 |
-| `server-sequential-thinking` | 1 | 58 | 0 | 0 | 0 |
-| `server-everything` | 13 | 245 | 0 | 0 | 0 |
-
-Real-world hardening that came out of this validation (all regression-tested
-in the accuracy harness):
-
-- **Nested schema planning** — tools whose required arguments are arrays or
-  objects (`create_entities(entities: [{name, type, …}])`) now receive
-  schema-shaped payloads; coverage on `server-memory` went **40 → 324 active
-  invocations (+710%)**.
-- **Zero-argument tools** — response-only surfaces (think
-  `printEnvironmentVariables`) are now invoked once and response-scanned for
-  secret shapes; previously a guaranteed miss.
-- **`--allow-tool` enforced** — exclude destructive tools (`create_* push_*
-  delete_* …`) from active testing with exact and `prefix*` wildcard patterns;
-  verified live by scanning the GitHub server with all 12 write tools excluded.
-
-The reference implementations scored clean — which is itself the point: they
-are the ecosystem's hardened baseline, and MCPVeil confirms it with hundreds
-of real exploit attempts instead of a lint pass.
-
-## How it works
-
-```
-        ┌────────────────────────────────────────────────────────┐
-        │                   CLI (commander)                      │
-        └──────┬─────────────────────────────────────────────────┘
-               │ load config (zod-validated)
-               ▼
-     ┌───────────────────┐      ┌─────────────────────────────┐
-     │ TransportFactory  │─────▶│ Session (MCP client, SDK)   │
-     │ stdio|http|sse    │      │ connect + initialize        │
-     └───────────────────┘      └──────────┬──────────────────┘
-                                           │ inventory()
-                                           ▼
-                              ┌─────────────────────────────┐
-                              │ Inventory (paginated)       │
-                              │ tools[] resources[] prompts │
-                              └──────┬──────────┬───────────┘
-                                     ▼          ▼
-                          ┌────────────┐  ┌──────────────────────────┐
-                          │ StaticPass │  │ ActivePass               │
-                          │ descriptions│  │ ArgPlanner → Executor →  │
-                          │ schemas     │  │ Analyzer (content signals)│
-                          └──────┬─────┘  └──────────┬───────────────┘
-                                 └────────┬──────────┘
-                                          ▼
-                          Report (terminal | json | SARIF 2.1.0)
-                          + posture score + policy exit code
-```
-
-The **schema-aware argument planner** reads each tool's JSON Schema, classifies
-every argument by intent (`path`, `url`, `command`, `sql`, `neutral`), places
-the right payload family into the right argument, and fills all remaining
-required arguments with benign typed values so calls are accepted by real
-servers.
-
-The **analyzer** only confirms a finding on *content signals* — a canary file's
-contents, an executed echo-marker, a row-blast delta, a loopback admin banner —
-never on payload reflection. Every signal is echo-safe: a server that merely
-echoes its arguments can never produce a confirmed finding.
-
-## The six checks
-
-| Check | What it proves | Severity |
-|---|---|---|
-| `path-traversal` | Tool arguments / file resources escape the intended base directory and read arbitrary files (canary + `/etc/passwd` + `win.ini` confirmation) | high |
-| `command-injection` | Shell metacharacters achieve real command execution (executed-marker confirmation, substitution + chain + newline vectors) | critical |
-| `sql-injection` | Concatenated SQL: tautology row-blast (benign baseline vs attack) + per-engine error fingerprints (SQLite/Postgres/MySQL/Oracle/MSSQL) | critical |
-| `ssrf` | Tools fetch internal targets: loopback services, `file://`, cloud metadata (marker-confirmed only) | critical |
-| `credential-leak` | Secrets in descriptions/resources + active probes of `.env`, `/proc/self/environ`, `.ssh/id_rsa` with 13 secret pattern detectors (masked evidence) | critical |
-| `prompt-injection` | Tool-poisoning: instructional override phrases and invisible/bidi unicode smuggled in metadata (arXiv:2504.03767 class) | medium |
-
-All checks are deterministic (fixed payload packs, zero randomness, zero LLM)
-and independently disableable.
-
-## Quickstart
+Use **Node >=22.12.0**; Node 22 and 24 LTS are tested. Node 18/20 are unsupported.
 
 ```bash
-# stdio target — spawn and scan
-npx mcpveil-cli@latest scan --stdio "node dist/server.js" --yes
+npm install --global mcpveil-cli
+mcpveil --version
 
-# HTTP target (streamable HTTP with automatic SSE fallback)
-npx mcpveil-cli@latest scan --url http://localhost:3000/mcp --yes
+# Inventory metadata: no tools/call, resources/read, or prompts/get requests.
+mcpveil scan --stdio "node path/to/server.js" --inventory-only --yes
 
-# inventory only — zero tool invocations, static pass only
-npx mcpveil-cli@latest scan --stdio "python -m my_mcp_server" --inventory-only
+# Active testing of your own disposable test server.
+mcpveil scan --stdio "node path/to/server.js" --yes
 
-# CI: SARIF for GitHub Code Scanning + policy exit code
-npx mcpveil-cli@latest scan --stdio "node dist/server.js" \
-  --format sarif -o mcpveil.sarif --fail-on high --yes
+# Streamable HTTP, with legacy SSE fallback when needed.
+mcpveil scan --url http://127.0.0.1:8123/mcp --yes
 ```
 
-**Exit-code contract** (stable, CI-consumable):
+Only contact servers you own or are authorized to test. **Stdio starts server
+code even in inventory-only mode.** Active tool calls can have side effects;
+use disposable test data and isolate untrusted servers in a container or VM.
+An isolated child HOME and filtered environment do not create a filesystem
+sandbox. See [safe local testing](docs/sandbox.md).
 
-| Code | Meaning |
+## What it checks
+
+| Check | Evidence and limits |
 |---|---|
-| `0` | clean — no findings at/above `--fail-on` |
-| `1` | policy failure — findings at/above threshold |
-| `2` | scan failure — could not connect / scan crashed |
-| `3` | usage error — bad flags, missing `--yes` consent |
+| Path traversal | Canary or recognizable file contents returned by crafted paths/resources |
+| Command injection | Decoded marker on an output line; marker bytes are encoded in the POSIX probes to resist input reflection |
+| SQL injection | Paired read-only true/false conditions compared with a benign baseline; SQL error text is suspicious rather than confirmed |
+| SSRF | Response markers from loopback, metadata, or file targets; blind out-of-band callbacks are not verified |
+| Credential exposure | Secret-shaped data in metadata, resource/prompt contents, and textual or structured tool responses |
+| Prompt injection | Known override phrases and invisible Unicode in tool/schema metadata, resources, prompts, and server instructions |
 
-> **Consent gate:** scanning executes the target and invokes its tools with
-> attack payloads. `--yes` attests you understand this. Only scan servers you
-> own or have written permission to test; sandbox untrusted targets.
+These are bounded checks, not a proof that a server or an agent is secure.
+Prompt-injection heuristics do not establish whether an LLM will follow an
+instruction. A credential-shaped match does not validate that a credential is
+live. Unsupported schemas, exhausted budgets, truncation, and operational
+failures are reported as assessment limitations.
 
-## Use it as your CI security gate
-
-In any repo that builds an MCP server:
-
-```yaml
-# .github/workflows/mcp-security.yml
-name: MCP Security Gate
-on:
-  pull_request:
-  push: { branches: [main] }
-
-jobs:
-  mcpveil:
-    runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22 }
-      - name: Build my MCP server
-        run: npm ci && npm run build        # produces dist/server.js
-      - name: MCPVeil scan
-        run: |
-          npx mcpveil-cli@latest scan \
-            --stdio "node dist/server.js" \
-            --format sarif -o mcpveil.sarif --yes
-      - name: Upload results to Code Scanning
-        uses: github/codeql-action/upload-sarif@v3
-        with: { sarif_file: mcpveil.sarif }
-```
-
-- `--fail-on high` blocks PRs with high/critical findings; `--fail-on medium`
-  is the paranoid setting; `--fail-on never` reports without gating.
-- Every finding carries a stable **fingerprint** (`sha256(checkId|tool|payload|…)`),
-  ready for baseline suppression files (v0.2 `--baseline`).
-- SARIF is 2.1.0 with per-rule `security-severity` mapping — findings appear
-  in GitHub's Security tab with severity and remediation guidance.
-
-## The accuracy harness — the moat
-
-`test/vulnerable-server/` is a deliberately vulnerable MCP server with **9
-planted vulnerabilities** covering all six check classes, including tool
-poisoning with invisible unicode (`\u200b`, `\u202e`) hidden in a tool
-description. `test/safe-server/` is its hardened control group: the same
-capability categories, correct defenses.
-
-The e2e harness runs the **built CLI** against both and gates CI on:
-
-1. **Recall = 100%** — all six checks fire on the vulnerable server, with
-   confirmed evidence (canary content, executed markers, row-blast deltas,
-   loopback banners).
-2. **Precision = 100%** — zero confirmed findings on the hardened server
-   (~200 live invocations, exit code 0).
-3. **Determinism** — two consecutive scans produce identical fingerprint sets.
-
-There is no "Juice Shop for MCP" anywhere else in the ecosystem. This pair is
-both our quality gate and a public benchmark any other tool can be measured
-against. Run it yourself:
+## Reports and CI
 
 ```bash
-npm run scan:vulnerable   # grade F, exit 1, 80+ findings
-npm run scan:safe         # grade A, exit 0
-npm run test:e2e          # the harness CI runs on Node 18/20/22
+mcpveil scan --stdio "node test-server.js" --yes --format json -o report.json
+mcpveil scan --stdio "node test-server.js" --yes --format sarif -o report.sarif
 ```
 
-<details>
-<summary>Sample report — vulnerable reference server</summary>
+| Exit | Meaning |
+|---|---|
+| 0 | Completed requested assessment; no finding exceeds the configured threshold |
+| 1 | Completed assessment with a policy-breaking finding |
+| 2 | Failed or partial assessment, including timeout or insufficient coverage |
+| 3 | Invalid arguments/configuration, unsupported runtime, or missing consent |
 
-```
-◆ MCPVeil v0.1.0 — scan report
-target: stdio: node_modules/.bin/tsx test/vulnerable-server/index.ts
-inventory: 8 tools · 1 resources · 0 prompts
+`--fail-on never` disables finding-based failures; it does **not** turn a failed
+or incomplete scan into success. Reports include `schemaVersion`, `status`,
+`mode`, errors, excluded/untested tools, call counts and limitations. Incomplete
+and metadata-only scans have `score: null`; they are not assigned a security
+grade. SARIF sets `executionSuccessful: false` for incomplete assessments.
 
-│ CRITICAL │ command-injection │ run_command   │ OS command injection confirmed (argument 'command')      │
-│ CRITICAL │ sql-injection     │ search_users  │ SQL injection (tautology row-blast) confirmed             │
-│ CRITICAL │ ssrf              │ fetch_url     │ SSRF confirmed (loopback admin reachable)                 │
-│ CRITICAL │ credential-leak   │ read_notes    │ AWS Secret Access Key via probe '../.env' (masked)        │
-│ HIGH     │ path-traversal    │ read_notes    │ Path traversal confirmed (canary content)                 │
-│ MEDIUM   │ prompt-injection  │ dict_lookup   │ Invisible unicode in description (tool poisoning)         │
-
-Posture score: 0/100 (grade F)   → exit 1
-```
-</details>
+Reports and scanner/target error output are sanitized, including secret-shaped
+excerpts, supplied credentials, sensitive command flags, and URL credentials.
+Inspect reports before sharing them: arbitrary application data can still be
+private without resembling a credential.
 
 ## Configuration
 
-CLI flags override `mcpveil.config.json` (see
-[mcpveil.config.example.json](mcpveil.config.example.json)):
+Pass `--config mcpveil.config.json` explicitly. Precedence is **explicit CLI
+flags > config file > defaults**. Unknown keys and check names are rejected.
 
-```jsonc
+```json
 {
-  "checks":  { "prompt-injection": true, "ssrf": true },  // toggle any of the six
-  "failOn":  "high",           // exit-1 threshold | "never"
-  "timeoutMs": 10000,          // per-call timeout
-  "maxCallsPerTool": 12,       // active-pass budget per tool
-  "allowTools": ["get_weather"], // excluded from active testing
-  "ssrfCollaboratorUrl": "https://<your-collaborator>", // optional out-of-band SSRF
-  "output": { "format": "terminal" }  // terminal | json | sarif (+ optional "path")
+  "checks": { "ssrf": true, "prompt-injection": true },
+  "failOn": "high",
+  "timeoutMs": 10000,
+  "scanTimeoutMs": 120000,
+  "maxCallsPerTool": 128,
+  "allowTools": ["create_*", "delete_*"],
+  "output": { "format": "json" }
 }
 ```
 
-CLI: `--stdio`, `--url`, `--transport`, `--format`, `-o`, `--fail-on`,
-`--timeout`, `--allow-tool`, `--skip-check`, `--inventory-only`, `--yes`,
-`-c/--config`.
+`maxCallsPerTool` is one shared budget across checks **including benign
+baselines**. The allowed range is 1–200. Exhaustion is visible and produces a
+partial result. `allowTools` / `--allow-tool` exclude active calls; static
+metadata inspection and the true inventory count are retained. A trailing `*`
+matches a tool-name prefix.
 
-Programmatic API:
+The default per-request timeout is 10 seconds and the overall deadline is two
+minutes. Inventory pagination and content requests are bounded. Timeouts use
+SDK cancellation; a target may already have performed work before cancellation.
 
-```ts
-import { runScan, connect } from "mcpveil";
+Stdio targets receive a temporary HOME and a small runtime environment.
+Credentials are not inherited implicitly. Forward required variables by name:
 
-const session = await connect({ kind: "stdio", command: ["node", "dist/server.js"] });
-const report = await runScan(session.client, target, config);
-const sarif = renderSarif(report); // or inspect report.findings / report.score
-await session.close();
+```bash
+mcpveil scan --stdio "node test-server.js" --env TEST_SERVICE_TOKEN --yes
 ```
 
-## Research grounding
+`--env` is repeatable. Use restricted test credentials. `--inventory-only` still
+needs `--yes`, and CI does not bypass consent automatically. Run
+`mcpveil scan --help` for all supported flags.
 
-MCPVeil's check taxonomy follows the risk framework in
-[*Enterprise-Grade Security for MCP*](https://arxiv.org/abs/2504.08623)
-(arXiv:2504.08623), and its active-testing approach extends the
-[**MCP Safety Audit**](https://arxiv.org/abs/2504.03767) (arXiv:2504.03767) —
-replacing LLM judgment with deterministic, content-confirmed signals that can
-gate CI. The tool-poisoning detector targets the description-smuggling class
-documented there, including invisible-unicode channels. Detection heuristics
-also account for patterns behind CVE-2025-49596 and CVE-2025-6514, and the
-persistent-concatenation SQLi class highlighted in the January 2026
-*Security Analysis of the Model Context Protocol*.
+## Programmatic API
 
-## Comparison
+```js
+import { writeFileSync } from "node:fs";
+import { connect, runScan, defaultConfig, renderSarif } from "mcpveil-cli";
 
-| | MCPVeil | Snyk Agent Scan | NVIDIA SkillSpector | Tencent AI-Infra-Guard |
-|---|---|---|---|---|
-| Active payload testing of live servers | ✅ | ❌ static | ❌ static | ✅ platform-level |
-| Real MCP sessions (stdio / HTTP / SSE) | ✅ | descriptions only | n/a (skills) | ✅ |
-| Deterministic & reproducible findings | ✅ | ❌ (NL heuristics) | ✅ | ❌ |
-| SARIF 2.1.0 → GitHub Code Scanning | ✅ | partial | ✅ (skills) | ❌ |
-| Exit-code PR gating for MCP servers | ✅ | ❌ | ❌ | ❌ |
-| Vulnerable reference server + accuracy harness | ✅ | ❌ | ❌ | ❌ |
-| Install footprint | `npx` (Node) | Python | Python | Docker + server |
-| LLM required | never | no | optional | no |
+const target = { kind: "stdio", command: ["node", "path/to/test-server.js"] };
+const config = defaultConfig();
+const session = await connect(target, { timeoutMs: config.timeoutMs });
+try {
+  const report = await runScan(session, target, config);
+  writeFileSync("report.sarif", renderSarif(report));
+  if (report.status !== "complete") throw new Error("Assessment incomplete");
+} finally {
+  await session.close();
+}
+```
 
-## Contributing
+Pass the **session**, not `session.client`, to `runScan`. The entry point exports
+the scanner, connection/inventory/config helpers, and JSON/SARIF/terminal
+renderers. API callers authorize their own target connections and should use
+the same isolation and credential restrictions as CLI users.
 
-Release maintainers: see [Publishing to npm](docs/npm-release.md) for the
-GitHub Actions trusted-publisher setup and release steps.
+## Test the project
 
-PRs welcome — the fastest way to help is a **payload pack** (labeled
-`good-first-issue`): see [CONTRIBUTING.md](CONTRIBUTING.md) for the
-echo-safety and non-destructiveness rules, and [ROADMAP.md](ROADMAP.md) for
-what's next (baselines, tool-drift detection, `mcpveil bench`).
+```bash
+npm ci
+npm run lint
+npm test
+npm run test:package
+```
 
-## License & ethics
+The suite includes safe and deliberately vulnerable reference servers, real
+SQLite side-effect controls, independent reflection/normalization controls,
+timeouts and failure status, redaction, budgets, strict CLI policy, and HTTP/SSE
+transport tests. Reference-fixture coverage and determinism are CI gates; they
+are not general precision/recall percentages. Test servers stay outside the npm
+distribution. [Contributing](CONTRIBUTING.md) describes the fixtures and rules.
 
-[MIT](./LICENSE). MCPVeil is a defensive testing tool — only scan servers you
-own or are authorized to test. Payloads are non-destructive by design (echo
-markers, canaries, tautologies); the vulnerable reference server ships only in
-`test/` and is never published to npm. See [SECURITY.md](SECURITY.md).
+## Compatibility and migration from 0.1.x
+
+- Node >=22.12.0 is now required, matching runtime dependencies.
+- Report schema 2.0 adds completion and coverage fields; `score` may be null.
+- The default shared per-tool budget is 128. Existing smaller budgets may
+  intentionally produce incomplete coverage.
+- Explicit config thresholds are honored, and invalid options are rejected
+  before contacting a target.
+- Stdio credentials need explicit `--env` forwarding or API `target.env`.
+- Keep report consumers aware of assessment status before interpreting a grade.
+
+The bundled SDK currently negotiates legacy MCP revisions through 2025-11-25.
+Current-protocol compatibility is tracked separately and is not implied by a
+successful connection to a legacy-compatible server.
+
+## Ecosystem and roadmap
+
+[Cisco MCP Scanner](https://github.com/cisco-ai-defense/mcp-scanner),
+[Snyk Agent Scan](https://github.com/snyk/agent-scan), and
+[MCP Safety Scanner](https://github.com/leidosinc/McpSafetyScanner) have different
+analysis and integration strengths. MCPVeil focuses on local, reproducible
+server regression checks. See [ROADMAP.md](ROADMAP.md) for measured accuracy,
+onboarding, authenticated transports, baselines and tool-drift work.
+
+## License and security
+
+[MIT](LICENSE). Report vulnerabilities privately through the repository's
+Security tab; see [SECURITY.md](SECURITY.md). Do not post reports containing real
+credentials or private application data.
