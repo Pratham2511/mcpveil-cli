@@ -25,7 +25,12 @@ export const COMMAND_INJECTION_PAYLOADS: InjectionPayload[] = [
 export function commandPayloadArgs(): string[] {
   const encoded = [...FORGE_CMD_MARKER].map((char) => `\\${char.charCodeAt(0).toString(8)}`).join("");
   const command = `printf '\\n${encoded}\\n'`;
-  return COMMAND_INJECTION_PAYLOADS.map((p) => p.arg.replace(/\$\{M\}/g, () => command));
+  const values = COMMAND_INJECTION_PAYLOADS.map((p) => p.arg.replace(/\$\{M\}/g, () => command));
+  // Quote breakout + encoded Node marker also exercises cmd.exe-backed Node targets.
+  // Reflection retains only base64 bytes, never the decoded success line.
+  const base64 = Buffer.from(FORGE_CMD_MARKER).toString("base64");
+  values.push(`" & node -e "console.log(Buffer.from('${base64}','base64').toString())" & rem "`);
+  return values;
 }
 
 /**

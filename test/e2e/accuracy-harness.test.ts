@@ -50,7 +50,7 @@ function scan(serverPath: string): { status: number | null; report: ScanReport; 
     TEST_NODE,
     [
       CLI, "scan",
-      "--stdio", `${TSX} ${serverPath}`,
+      "--stdio", `${JSON.stringify(TEST_NODE)} --import tsx ${JSON.stringify(serverPath)}`,
       "--format", "json",
       "-o", reportPath,
       "--yes",
