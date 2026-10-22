@@ -4,7 +4,8 @@
 
 | Version | Supported          |
 |---------|--------------------|
-| 0.1.x   | :white_check_mark: |
+| 0.2.x   | :white_check_mark: |
+| < 0.2   | :x: — upgrade for safety and reporting repairs |
 
 ## Reporting a vulnerability
 
@@ -64,13 +65,17 @@ credential exposure privately and revoke the affected credential.
 MCPVeil is an *active* testing tool: it executes the target server and sends
 attack payloads through its tools. Our own rules for shipped payloads:
 
-1. **Non-destructive by construction** — echo-markers instead of destructive
-   commands, tautology probes instead of real `DROP TABLE` success paths,
+1. **Read-only probe design** — echo-markers instead of destructive
+   commands, paired read-only SQL controls; no write statements,
    loopback/metadata markers instead of external exfiltration.
 2. **Echo-safe signals** — a success signal must never be satisfiable by a
    server that merely reflects its own input.
-3. **No LLM, no randomness** in detection paths — same server + same config =
-   same findings.
+3. **Local deterministic detection** — fixture findings are reproducible;
+   changing server data or timeouts may change an actual assessment.
+4. **Fail honestly** — incomplete coverage and operational errors are ungraded
+   and exit nonzero.
+5. **Contain target code** — active MCP tools can have side effects regardless
+   of probe design. Use disposable data and an external container/VM boundary.
 
 If you are adding a new payload or check, review
 [CONTRIBUTING.md](CONTRIBUTING.md)'s destructive-capability checklist first.

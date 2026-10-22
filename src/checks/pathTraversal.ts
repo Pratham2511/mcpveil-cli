@@ -1,6 +1,5 @@
 import type { ScanContext } from "../engine/scanner.js";
 import { planCalls } from "../engine/argPlanner.js";
-import { callToolSafe, readResourceSafe } from "../engine/executor.js";
 import { analyze, verboseErrorFinding } from "../engine/analyzer.js";
 import { TRAVERSAL_PAYLOADS } from "../payloads/traversal.js";
 
@@ -21,7 +20,7 @@ export async function runPathTraversal(ctx: ScanContext): Promise<void> {
   // 1) resources: try file:// URIs pointing outside the presented root
   for (const res of inv.resources) {
     for (const uri of buildResourceProbes(res.uri)) {
-      const r = await readResourceSafe(session.client, uri, config.timeoutMs);
+      const r = await ctx.readResource("path-traversal", uri, { probe: true });
       if (!r.ok || !r.text) continue;
       const f = analyze({
         checkId: "path-traversal", resource: uri, payload: uri,
@@ -40,9 +39,8 @@ export async function runPathTraversal(ctx: ScanContext): Promise<void> {
     const values = buildTraversalValues();
     const calls = planCalls(tool, "path", values, config.maxCallsPerTool);
     for (const call of calls) {
-      const outcome = await callToolSafe(session.client, tool.name, call.args, config.timeoutMs);
-      ctx.countInvocation("path-traversal");
-      if (outcome.error) { ctx.registerError("path-traversal", `${tool.name}: ${outcome.error}`); continue; }
+      const outcome = await ctx.invokeTool("path-traversal", tool.name, call.args);
+      if (!outcome.ok) continue;
 
       const f = analyze({
         checkId: "path-traversal", tool: tool.name,

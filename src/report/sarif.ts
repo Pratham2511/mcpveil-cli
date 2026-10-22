@@ -1,5 +1,6 @@
 // src/report/sarif.ts
 import type { ScanReport, Finding, CheckMeta } from "../types.js";
+import { redactValue } from "../utils/redact.js";
 
 const SEV_TO_SARIF: Record<string, "error" | "warning" | "note"> = {
   critical: "error", high: "error", medium: "warning", low: "note", info: "note",
@@ -43,7 +44,7 @@ export function renderSarif(report: ScanReport): string {
     ],
   }));
 
-  return JSON.stringify({
+  return JSON.stringify(redactValue({
     $schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
     version: "2.1.0",
     runs: [
@@ -58,14 +59,16 @@ export function renderSarif(report: ScanReport): string {
         },
         invocations: [
           {
-            executionSuccessful: true,
-            endTimeUtc: new Date(report.startedAt).toISOString(),
+            executionSuccessful: report.status === "complete",
+            endTimeUtc: new Date(Date.parse(report.startedAt) + report.durationMs).toISOString(),
+            toolExecutionNotifications: (report.errors ?? []).map((error) => ({ level: "error", message: { text: error } })),
           },
         ],
         results,
+        properties: { schemaVersion: report.schemaVersion, status: report.status, mode: report.mode, coverage: report.coverage },
       },
     ],
-  }, null, 2);
+  }), null, 2);
 }
 
 function severityToScore(s: string): string {

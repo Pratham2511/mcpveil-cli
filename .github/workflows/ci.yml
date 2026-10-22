@@ -8,7 +8,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [18, 20, 22]
+        node: [18, 20, 22, 24]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -17,18 +17,29 @@ jobs:
         with: { node-version: "${{ matrix.node }}" }
       - name: Save the CLI runtime under test
         id: runtime
-        run: echo "node=$(command -v node)" >> "$GITHUB_OUTPUT"
-      # Vitest 5 needs Node >=22.12. The built CLI and fixture servers still
-      # run on the matrix version through MCPVEIL_TEST_NODE in the e2e harness.
+        run: |
+          echo "node=$(command -v node)" >> "$GITHUB_OUTPUT"
+          echo "npm=$(command -v npm)" >> "$GITHUB_OUTPUT"
+      # Use a supported Vitest runner; retain legacy binaries for rejection tests.
       - uses: actions/setup-node@v7
-        with: { node-version: 22 }
+        with: { node-version: "${{ matrix.node == 24 && '24' || '22' }}" }
       - run: npm ci
       - run: npm run lint
       - run: npm run build
       - run: npm run test:unit
-      - run: npm run test:e2e   # the accuracy harness gate
+      # Keep the protected 18/20 contexts as explicit rejection tests. These
+      # runtimes are no longer advertised; supported CLI runtimes are 22/24.
+      - name: Reject unsupported runtimes and strict installation
+        if: matrix.node == 18 || matrix.node == 20
+        run: node scripts/test-runtime-policy.mjs
+        env:
+          MCPVEIL_TEST_NODE: ${{ steps.runtime.outputs.node }}
+          MCPVEIL_TEST_NPM: ${{ steps.runtime.outputs.npm }}
+      - run: npm run test:e2e
+        if: matrix.node == 22 || matrix.node == 24
         env:
           MCPVEIL_TEST_NODE: ${{ steps.runtime.outputs.node }}
       - run: npm run test:package
+        if: matrix.node == 22 || matrix.node == 24
         env:
           MCPVEIL_TEST_NODE: ${{ steps.runtime.outputs.node }}
