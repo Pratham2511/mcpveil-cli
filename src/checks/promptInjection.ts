@@ -1,3 +1,4 @@
+import { flattenProperties } from "../engine/schema.js";
 import type { ScanContext } from "../engine/scanner.js";
 import { INJECTION_PHRASES, INVISIBLE_UNICODE } from "../payloads/secretPatterns.js";
 import { excerpt } from "../utils/mask.js";
@@ -11,7 +12,7 @@ export async function runPromptInjection(ctx: ScanContext): Promise<void> {
 
   for (const tool of inv.tools) {
     inspect(ctx, { tool: tool.name, kind: "tool description" }, tool.description);
-    for (const p of tool.properties) {
+    for (const p of flattenProperties(tool.properties)) {
       if (p.description) inspect(ctx, { tool: tool.name, kind: `argument '${p.name}' description` }, p.description);
     }
   }

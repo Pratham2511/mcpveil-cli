@@ -71,3 +71,8 @@ checks a fresh tarball installation for the patched minimum versions.
 Advisories: [qs](https://github.com/ljharb/qs/security/advisories/GHSA-6pq8-jhm2-2vcw),
 [ip-address](https://github.com/beaugunderson/ip-address/security/advisories/GHSA-rxp7-6hxx-x8q5),
 and [Hono](https://github.com/honojs/hono/security/advisories/GHSA-5r4p-p66f-jhc7).
+
+Release validation builds and tests the tarball in a job without OIDC publishing
+permission. A separate publisher downloads that immutable workflow artifact,
+verifies its SHA-256 and publishes with lifecycle scripts disabled. Keep the
+trusted publisher workflow filename `publish.yml`.

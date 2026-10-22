@@ -27,7 +27,16 @@ export interface ToolSchemaProperty {
   type: string; // "string" | "number" | "boolean" | "array" | "object" | "unknown"
   description?: string;
   required: boolean;
-  enum?: string[];
+  enum?: unknown[];
+  constValue?: unknown;
+  minimum?: number;
+  maximum?: number;
+  minLength?: number;
+  maxLength?: number;
+  minItems?: number;
+  maxItems?: number;
+  /** Unsupported constraints are surfaced as coverage limits, never evaluated as code. */
+  limitations?: string[];
   /** arrays only: parsed JSON-schema of the item type */
   items?: ToolSchemaProperty;
   /** objects only: nested property list */
@@ -40,6 +49,7 @@ export interface ToolInfo {
   inputSchema: Record<string, unknown>;
   properties: ToolSchemaProperty[];
   requiredArgNames: string[];
+  schemaLimitations?: string[];
 }
 
 export interface ResourceInfo {
@@ -102,6 +112,7 @@ export interface ScanReport {
     limitations: string[];
     toolCalls: Record<string, number>;
     resourceReads: number;
+    latencyMs?: { samples: number; p50: number; p95: number };
   };
   target: ScanTarget;
   serverInfo?: { name?: string; version?: string };

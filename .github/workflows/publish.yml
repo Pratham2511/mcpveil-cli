@@ -1,23 +1,17 @@
 name: Publish to npm
-
 on:
   release:
     types: [published]
-
 permissions:
   contents: read
-
 concurrency:
   group: npm-publish-${{ github.event.release.tag_name }}
   cancel-in-progress: false
-
 jobs:
-  publish:
+  validate:
     if: ${{ !github.event.release.prerelease }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
+    # Target fixture code and lifecycle scripts never share the publisher job's OIDC permission.
     steps:
       - uses: actions/checkout@v7
         with:
@@ -28,18 +22,49 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
           package-manager-cache: false
-      - name: Install npm with trusted publishing support
-        run: npm install --global npm@11
-      - name: Prepare repository metadata from GitHub context
+      - name: Prepare public repository metadata
         run: node scripts/prepare-publish.mjs
       - name: Check release tag against package version
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: node scripts/check-release.mjs
       - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run test:package
       - run: npm audit --omit=dev --audit-level=moderate
-      # prepublishOnly validates lint, all tests, and a fresh tarball install
-      # before npm authenticates using this workflow's OIDC identity.
-      - run: npm publish --provenance
+      - name: Build release artifact
+        run: |
+          mkdir release-artifact
+          npm pack --ignore-scripts --pack-destination release-artifact
+          cd release-artifact
+          sha256sum *.tgz > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-release
+          path: release-artifact/
+          if-no-files-found: error
+          retention-days: 7
+  publish:
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - run: npm install --global npm@11
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-release
+          path: release-artifact
+      - name: Verify and publish the tested tarball without lifecycle scripts
+        working-directory: release-artifact
+        run: |
+          sha256sum --check SHA256SUMS
+          npm publish ./*.tgz --ignore-scripts --provenance --access public

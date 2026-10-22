@@ -10,6 +10,7 @@ import { renderSarif } from "./report/sarif.js";
 import type { ScanTarget, TransportKind, Severity, ForgeConfig, ScanReport } from "./types.js";
 import { log } from "./utils/logger.js";
 import { redactText } from "./utils/redact.js";
+import { doctor } from "./doctor.js";
 import { VERSION } from "./version.js";
 
 export const EXIT = { CLEAN: 0, POLICY_FAIL: 1, SCAN_FAIL: 2, USAGE: 3 } as const;
@@ -32,6 +33,18 @@ function integer(min: number, max: number) {
 const program = new Command().name("mcpveil")
   .description("Local security regression tests for MCP servers.").version(VERSION).exitOverride()
   .configureOutput({ writeErr: (text) => process.stderr.write(redactText(text)), writeOut: (text) => process.stdout.write(redactText(text)) });
+
+program.command("doctor").description("Check setup without starting or contacting a target")
+  .option("-c, --config <path>", "validate a configuration")
+  .option("--env <name>", "check required variable presence without displaying values", (v: string, previous: string[]) => [...previous, v], [])
+  .option("--json", "machine-readable diagnostics")
+  .action((opts) => {
+    try {
+      const result = doctor(opts.config, opts.env);
+      console.log(opts.json ? JSON.stringify(result, null, 2) : `MCPVeil ${result.version} · Node ${result.node} · ${result.platform}/${result.architecture}\nSetup: ${result.status} · configuration: valid\n${result.isolation}\n${result.missingEnv.length ? `Missing variables: ${result.missingEnv.join(", ")}` : result.next}`);
+      process.exitCode = result.status === "ready" ? 0 : 3;
+    } catch (err) { log.error(err instanceof Error ? err.message : String(err)); process.exitCode = 3; }
+  });
 
 program.command("scan").description("Scan an explicitly authorized MCP server")
   .option("--stdio <command>", "launch an exact command through stdio (no shell)")

@@ -34,7 +34,7 @@ export function analyze(i: AnalyzeInput): Finding | null {
         confidence: i.confidence ?? "confirmed",
         title: i.title,
         remediation: i.remediation,
-        fingerprint: fingerprint([i.checkId, i.tool, i.resource, i.payload, m[0]]),
+        fingerprint: fingerprint([i.checkId, i.tool, i.resource, i.payload, rx.source]),
       };
     }
   }
