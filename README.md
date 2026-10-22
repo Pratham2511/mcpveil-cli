@@ -19,6 +19,7 @@ Use **Node >=22.12.0**; Node 22 and 24 LTS are tested. Node 18/20 are unsupporte
 
 ```bash
 npm install --global mcpveil-cli
+mcpveil doctor
 mcpveil --version
 
 # Inventory metadata: no tools/call, resources/read, or prompts/get requests.
@@ -36,6 +37,13 @@ code even in inventory-only mode.** Active tool calls can have side effects;
 use disposable test data and isolate untrusted servers in a container or VM.
 An isolated child HOME and filtered environment do not create a filesystem
 sandbox. See [safe local testing](docs/sandbox.md).
+
+## Real CLI demonstration
+
+![Real MCPVeil CLI: setup, safe echo server, and vulnerable SQLite](assets/demo.gif)
+
+Recorded from actual isolated CLI runs with synthetic data. The [recording](assets/demo.cast)
+and [capture script](scripts/record-demo.py) are reproducible; no real credentials are used.
 
 ## What it checks
 
@@ -70,7 +78,9 @@ mcpveil scan --stdio "node test-server.js" --yes --format sarif -o report.sarif
 
 `--fail-on never` disables finding-based failures; it does **not** turn a failed
 or incomplete scan into success. Reports include `schemaVersion`, `status`,
-`mode`, errors, excluded/untested tools, call counts and limitations. Incomplete
+`mode`, errors, excluded/untested tools, call counts, measured p50/p95 tool-request
+latency and limitations. Terminal output groups related signals; JSON and SARIF retain
+individual findings and remediation. Incomplete
 and metadata-only scans have `score: null`; they are not assigned a security
 grade. SARIF sets `executionSuccessful: false` for incomplete assessments.
 
@@ -115,7 +125,9 @@ mcpveil scan --stdio "node test-server.js" --env TEST_SERVICE_TOKEN --yes
 
 `--env` is repeatable. Use restricted test credentials. `--inventory-only` still
 needs `--yes`, and CI does not bypass consent automatically. Run
-`mcpveil scan --help` for all supported flags.
+`mcpveil doctor --config mcpveil.config.json --env TEST_SERVICE_TOKEN` to validate
+setup and variable availability without contacting a target. Values are never
+displayed. `mcpveil doctor --json` supports automation. Run `mcpveil scan --help` for all supported flags.
 
 ## Programmatic API
 
@@ -147,6 +159,8 @@ npm ci
 npm run lint
 npm test
 npm run test:package
+# Run synthetic targets in the disposable sandbox described above:
+npm run benchmark -- docs/benchmark.json
 ```
 
 The suite includes safe and deliberately vulnerable reference servers, real
@@ -155,6 +169,20 @@ timeouts and failure status, redaction, budgets, strict CLI policy, and HTTP/SSE
 transport tests. Reference-fixture coverage and determinism are CI gates; they
 are not general precision/recall percentages. Test servers stay outside the npm
 distribution. [Contributing](CONTRIBUTING.md) describes the fixtures and rules.
+
+The [labeled benchmark](docs/benchmark.json) records ten independent synthetic
+cases, their expected/detected checks, request counts and measured timings. These
+include echo/normalization/search controls, structured credentials, nested schemas,
+metadata poisoning and a real SQLite differential. CI also checks Windows/macOS
+on Node 22/24; the protected Linux 18/20 jobs verify explicit rejection.
+
+Argument planning supports bounded nested objects/arrays, local references,
+nullable alternatives, enum/const siblings, and common numeric/size constraints.
+At most two ranked injectable leaves per check are probed. The parser is bounded
+to depth 12 and 512 nodes. External/recursive references, complex alternatives and
+unsupported constraints (including regular expressions) are surfaced; arbitrary
+server-provided regexes are never executed. Schema support does not imply exhaustive
+JSON Schema coverage or that every generated request will be accepted.
 
 ## Compatibility and migration from 0.1.x
 

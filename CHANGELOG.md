@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- Bounded recursive argument planning with local references and required constrained siblings; nested SQL/SSRF payload handling corrected.
+- Setup diagnostics (`doctor`), measured call latency, readable grouped terminal reports and stable signal fingerprints.
+- Ten-case executable accuracy corpus and a real CLI recording replace the simulated demonstration.
+- Windows/macOS compatibility CI, and release validation separated from the minimal OIDC publisher job.
+
+
 ## 0.2.0
 
 Compatibility: requires Node >=22.12.0. Report schema 2.0 introduces explicit

@@ -44,7 +44,7 @@ export async function runPathTraversal(ctx: ScanContext): Promise<void> {
 
       const f = analyze({
         checkId: "path-traversal", tool: tool.name,
-        payload: call.args[call.attacked[0]!] as string,
+        payload: call.value,
         responseText: outcome.text,
         signals: SIGNALS,
         severity: "high",
@@ -54,7 +54,7 @@ export async function runPathTraversal(ctx: ScanContext): Promise<void> {
       if (f) ctx.emit(f);
 
       const verr = outcome.isError
-        ? verboseErrorFinding("path-traversal", tool.name, call.args[call.attacked[0]!] as string, outcome.text)
+        ? verboseErrorFinding("path-traversal", tool.name, call.value, outcome.text)
         : null;
       if (verr) ctx.emit(verr);
     }

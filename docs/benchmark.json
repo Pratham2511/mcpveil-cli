@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "packageVersion": "0.3.0",
+  "node": "v22.23.4",
+  "scope": "Ten labeled synthetic local cases. This is fixture coverage, not population precision/recall or proof of security.",
+  "results": [
+    {
+      "case": "echo",
+      "expected": [],
+      "detected": [],
+      "passed": true,
+      "durationMs": 78,
+      "calls": 47,
+      "latencyMs": {
+        "samples": 47,
+        "p50": 1,
+        "p95": 2
+      }
+    },
+    {
+      "case": "normalize",
+      "expected": [],
+      "detected": [],
+      "passed": true,
+      "durationMs": 82,
+      "calls": 47,
+      "latencyMs": {
+        "samples": 47,
+        "p50": 1,
+        "p95": 2
+      }
+    },
+    {
+      "case": "literal-search",
+      "expected": [],
+      "detected": [],
+      "passed": true,
+      "durationMs": 83,
+      "calls": 47,
+      "latencyMs": {
+        "samples": 47,
+        "p50": 1,
+        "p95": 3
+      }
+    },
+    {
+      "case": "secret",
+      "expected": [
+        "credential-leak"
+      ],
+      "detected": [
+        "credential-leak"
+      ],
+      "passed": true,
+      "durationMs": 42,
+      "calls": 1,
+      "latencyMs": {
+        "samples": 1,
+        "p50": 6,
+        "p95": 6
+      }
+    },
+    {
+      "case": "structured-secret",
+      "expected": [
+        "credential-leak"
+      ],
+      "detected": [
+        "credential-leak"
+      ],
+      "passed": true,
+      "durationMs": 41,
+      "calls": 1,
+      "latencyMs": {
+        "samples": 1,
+        "p50": 6,
+        "p95": 6
+      }
+    },
+    {
+      "case": "structured-opaque",
+      "expected": [
+        "credential-leak"
+      ],
+      "detected": [
+        "credential-leak"
+      ],
+      "passed": true,
+      "durationMs": 37,
+      "calls": 1,
+      "latencyMs": {
+        "samples": 1,
+        "p50": 4,
+        "p95": 4
+      }
+    },
+    {
+      "case": "deep-schema",
+      "expected": [
+        "credential-leak"
+      ],
+      "detected": [
+        "credential-leak"
+      ],
+      "passed": true,
+      "durationMs": 83,
+      "calls": 47,
+      "latencyMs": {
+        "samples": 47,
+        "p50": 1,
+        "p95": 2
+      }
+    },
+    {
+      "case": "poison",
+      "expected": [
+        "prompt-injection"
+      ],
+      "detected": [
+        "prompt-injection"
+      ],
+      "passed": true,
+      "durationMs": 84,
+      "calls": 47,
+      "latencyMs": {
+        "samples": 47,
+        "p50": 1,
+        "p95": 2
+      }
+    },
+    {
+      "case": "surfaces",
+      "expected": [
+        "prompt-injection"
+      ],
+      "detected": [
+        "prompt-injection"
+      ],
+      "passed": true,
+      "durationMs": 42,
+      "calls": 0,
+      "latencyMs": {
+        "samples": 0,
+        "p50": 0,
+        "p95": 0
+      }
+    },
+    {
+      "case": "sql-side-effect",
+      "expected": [
+        "sql-injection"
+      ],
+      "detected": [
+        "sql-injection"
+      ],
+      "passed": true,
+      "durationMs": 154,
+      "calls": 47,
+      "latencyMs": {
+        "samples": 47,
+        "p50": 2,
+        "p95": 5
+      }
+    }
+  ]
+}

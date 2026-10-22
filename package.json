@@ -1,6 +1,6 @@
 {
   "name": "mcpveil-cli",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Deterministic security test suite for MCP servers: sends real payloads through live MCP sessions and confirms exploitability from responses. CI-native with SARIF 2.1.0 output for GitHub Code Scanning.",
   "type": "module",
   "license": "MIT",
@@ -38,7 +38,8 @@
     "scan:vulnerable": "npm run build && node dist/cli.js scan --stdio \"node_modules/.bin/tsx test/vulnerable-server/index.ts\" --yes",
     "scan:safe": "npm run build && node dist/cli.js scan --stdio \"node_modules/.bin/tsx test/safe-server/index.ts\" --yes",
     "prepack": "npm run build",
-    "prepublishOnly": "npm run lint && npm test && npm run test:package"
+    "prepublishOnly": "npm run lint && npm test && npm run test:package",
+    "benchmark": "npm run build && node scripts/benchmark.mjs"
   },
   "keywords": [
     "mcp",

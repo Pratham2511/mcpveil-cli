@@ -35,8 +35,7 @@ export async function runSqlInjection(ctx: ScanContext): Promise<void> {
       const outcome = await ctx.invokeTool("sql-injection", tool.name, call.args);
       if (!outcome.ok) continue;
       const payload = JSON.stringify(call.args);
-      const input = call.args[call.attacked[0]!];
-      const value = typeof input === "string" ? input : JSON.stringify(input);
+      const value = call.value;
       outcomes.set(`${call.placement ?? call.attacked[0]}:${value}`, {
         rows: extractRows(outcome.structured ?? outcome.text), ok: !outcome.isError,
         echoed: typeof value === "string" && outcome.text.includes(value),

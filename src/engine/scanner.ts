@@ -54,6 +54,7 @@ export async function runScan(
   const findings: Finding[] = [];
   const results = new Map<CheckId, CheckResult>();
   const toolCalls: Record<string, number> = Object.fromEntries(inv.tools.map((tool) => [tool.name, 0]));
+  const latencies: number[] = [];
   let resourceReads = 0;
   let contentRequests = 0;
   const resourceCache = new Map<string, Promise<ReadOutcome>>();
@@ -81,7 +82,9 @@ export async function runScan(
       }
       toolCalls[name] = (toolCalls[name] ?? 0) + 1;
       results.get(id)!.invocations++;
-      return track(id, name, await callToolSafe(session.client, name, args, config.timeoutMs, signal));
+      const outcome = await callToolSafe(session.client, name, args, config.timeoutMs, signal);
+      latencies.push(outcome.durationMs);
+      return track(id, name, outcome);
     },
     async readResource(id, uri, opts) {
       if (!active) return { ok: false, text: "", skipped: "inventory-only" };
@@ -121,17 +124,20 @@ export async function runScan(
   const untestedTools = active && enabledActive ? inv.tools.filter((tool) => !excludedTools.includes(tool.name) && !toolCalls[tool.name]).map((tool) => tool.name) : [];
   const limitations = [...new Set([
     ...[...results.values()].flatMap((result) => result.limitations ?? []),
+    ...inv.tools.filter((tool) => !excludedTools.includes(tool.name)).flatMap((tool) => (tool.schemaLimitations ?? []).map((reason) => `${tool.name}: ${reason}`)),
     ...untestedTools.map((name) => `${name}: no supported active probe could be generated within the configured policy`),
   ])];
   const errors = [...(inv.errors ?? []), ...[...results.values()].flatMap((result) => result.errors.map((error) => `${result.meta.id}: ${error}`))];
   if (signal.aborted) errors.push("overall scan deadline or cancellation reached");
   const status = errors.length || limitations.length ? "partial" : "complete";
   const deduped = dedupe(findings);
+  latencies.sort((a, b) => a - b);
+  const latencyMs = { samples: latencies.length, p50: latencies[Math.max(0, Math.ceil(latencies.length * 0.50) - 1)] ?? 0, p95: latencies[Math.max(0, Math.ceil(latencies.length * 0.95) - 1)] ?? 0 };
   return redactValue({
     schemaVersion: "2.0", status, mode: active ? "active" : "inventory", errors,
     target: safeTarget(target), serverInfo: inv.serverInfo, startedAt, durationMs: Date.now() - Date.parse(startedAt),
     inventorySizes: { tools: inv.tools.length, resources: inv.resources.length, prompts: inv.prompts.length },
-    coverage: { excludedTools, untestedTools, limitations, toolCalls, resourceReads },
+    coverage: { excludedTools, untestedTools, limitations, toolCalls, resourceReads, latencyMs },
     results: [...results.values()], findings: deduped,
     score: status === "complete" && active ? computeScore(deduped) : null, mcpveilVersion: VERSION,
   });

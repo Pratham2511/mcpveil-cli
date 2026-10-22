@@ -17,7 +17,7 @@ export async function runSsrf(ctx: ScanContext): Promise<void> {
   for (const tool of inv.tools) {
     const calls = planCalls(tool, "url", payloads.map((p) => p.url), config.maxCallsPerTool);
     for (const call of calls) {
-      const value = call.args[call.attacked[0]!] as string;
+      const value = call.value;
       const match = payloads.find((p) => p.url === value);
       if (!match) continue;
 
