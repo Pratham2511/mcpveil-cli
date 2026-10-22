@@ -9,12 +9,12 @@
       "expected": [],
       "detected": [],
       "passed": true,
-      "durationMs": 78,
-      "calls": 47,
+      "durationMs": 86,
+      "calls": 48,
       "latencyMs": {
-        "samples": 47,
+        "samples": 48,
         "p50": 1,
-        "p95": 2
+        "p95": 3
       }
     },
     {
@@ -22,12 +22,12 @@
       "expected": [],
       "detected": [],
       "passed": true,
-      "durationMs": 82,
-      "calls": 47,
+      "durationMs": 94,
+      "calls": 48,
       "latencyMs": {
-        "samples": 47,
+        "samples": 48,
         "p50": 1,
-        "p95": 2
+        "p95": 4
       }
     },
     {
@@ -35,12 +35,12 @@
       "expected": [],
       "detected": [],
       "passed": true,
-      "durationMs": 83,
-      "calls": 47,
+      "durationMs": 93,
+      "calls": 48,
       "latencyMs": {
-        "samples": 47,
+        "samples": 48,
         "p50": 1,
-        "p95": 3
+        "p95": 4
       }
     },
     {
@@ -69,12 +69,12 @@
         "credential-leak"
       ],
       "passed": true,
-      "durationMs": 41,
+      "durationMs": 42,
       "calls": 1,
       "latencyMs": {
         "samples": 1,
-        "p50": 6,
-        "p95": 6
+        "p50": 5,
+        "p95": 5
       }
     },
     {
@@ -86,12 +86,12 @@
         "credential-leak"
       ],
       "passed": true,
-      "durationMs": 37,
+      "durationMs": 43,
       "calls": 1,
       "latencyMs": {
         "samples": 1,
-        "p50": 4,
-        "p95": 4
+        "p50": 5,
+        "p95": 5
       }
     },
     {
@@ -103,12 +103,12 @@
         "credential-leak"
       ],
       "passed": true,
-      "durationMs": 83,
-      "calls": 47,
+      "durationMs": 81,
+      "calls": 48,
       "latencyMs": {
-        "samples": 47,
+        "samples": 48,
         "p50": 1,
-        "p95": 2
+        "p95": 3
       }
     },
     {
@@ -120,12 +120,12 @@
         "prompt-injection"
       ],
       "passed": true,
-      "durationMs": 84,
-      "calls": 47,
+      "durationMs": 85,
+      "calls": 48,
       "latencyMs": {
-        "samples": 47,
+        "samples": 48,
         "p50": 1,
-        "p95": 2
+        "p95": 3
       }
     },
     {
@@ -137,7 +137,7 @@
         "prompt-injection"
       ],
       "passed": true,
-      "durationMs": 42,
+      "durationMs": 45,
       "calls": 0,
       "latencyMs": {
         "samples": 0,
@@ -154,12 +154,12 @@
         "sql-injection"
       ],
       "passed": true,
-      "durationMs": 154,
-      "calls": 47,
+      "durationMs": 85,
+      "calls": 48,
       "latencyMs": {
-        "samples": 47,
-        "p50": 2,
-        "p95": 5
+        "samples": 48,
+        "p50": 1,
+        "p95": 3
       }
     }
   ]
