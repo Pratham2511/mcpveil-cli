@@ -15,12 +15,12 @@ npm test        # unit + e2e accuracy harness (builds first)
 ```
 
 Development requirements: Node 22 (≥22.12.0) and npm for Vitest 5.
-The CLI accuracy harness still tests the built CLI and fixture servers on
-Node 18/20/22. To select another installed CLI runtime while keeping Vitest
+The CLI accuracy harness tests supported Node 22/24. Protected legacy job
+contexts verify clear rejection of unsupported Node 18/20. To select another installed CLI runtime while keeping Vitest
 on Node 22, use an absolute path:
 
 ```bash
-MCPVEIL_TEST_NODE=/path/to/node18/bin/node npm run test:e2e
+MCPVEIL_TEST_NODE=/path/to/node24/bin/node npm run test:e2e
 ```
 
 Verify your toolchain with the accuracy harness:
@@ -55,10 +55,10 @@ test/
 Any change that affects detection (payloads, signals, arg planning, analyzers)
 must keep the harness green:
 
-- **100% recall** — every one of the six checks fires against the vulnerable
+- **Reference-fixture coverage** — every one of the six checks fires against the vulnerable
   server, with confirmed (not merely suspicious) evidence for the headline
   findings.
-- **0 false positives** — zero confirmed findings against the hardened control
+- **Safe-fixture control** — zero confirmed findings against the hardened control
   server, exit code 0.
 - **Determinism** — two consecutive scans produce identical fingerprint sets.
 
@@ -75,9 +75,9 @@ Most contributions are new entries in `src/payloads/*`. Rules:
 2. **Echo-safe.** Your success signal must NOT fire if the server merely
    reflects the payload. Before opening the PR, prove this against the safe
    server: `npm run scan:safe` must exit 0 with zero confirmed findings.
-   (Pattern used by the command-injection pack: the raw payload always
-   contains `echo <MARKER>`, and the signal uses a lookbehind so reflected
-   `echo <MARKER>` text can never match.)
+   The command pack encodes its marker as octal bytes for POSIX printf;
+   reflected or whitespace-normalized payloads cannot produce the decoded
+   marker on its own output line.
 3. **Deterministic.** No timestamps in fingerprints, no network dependencies
    for CI-gating signals.
 4. **Documented.** One line per payload: what class of bug it catches.
@@ -88,7 +88,7 @@ Most contributions are new entries in `src/payloads/*`. Rules:
 - [ ] Payload cannot spawn long-running or resource-exhausting processes
 - [ ] Payload cannot reach third-party hosts (loopback/canary only)
 - [ ] Signal cannot be satisfied by input reflection (echo-safety test)
-- [ ] Failure of the payload degrades to "no finding", never to a crash
+- [ ] Operational failures produce an incomplete, ungraded scan rather than clean success
 
 ## Adding a new check
 
@@ -104,9 +104,9 @@ Most contributions are new entries in `src/payloads/*`. Rules:
 ## Review process
 
 - CI must be green: lint (strict tsc) and unit tests on Node 22, plus the
-  e2e accuracy harness against the CLI and fixture servers on Node 18/20/22.
+  e2e accuracy harness against the CLI and fixture servers on supported Node 22/24.
 - One maintainer review for docs/tests; two for new checks or payloads.
-- Keep `src/` free of `any` leaks and LLM dependencies (v0.1 contract).
+- Keep `src/` free of `any` leaks and LLM dependencies.
 
 ## Code style
 
@@ -118,7 +118,7 @@ Most contributions are new entries in `src/payloads/*`. Rules:
 ## Reporting bugs
 
 Open a GitHub issue with the exact command, MCPVeil version, target shape,
-and the JSON report. **Do not attach real secrets** — reports are masked, but
+and the JSON report. **Do not attach real secrets** — reports are sanitized, but
 scrub before pasting. Suspected vulnerabilities in MCPVeil itself go through
 [SECURITY.md](SECURITY.md).
 

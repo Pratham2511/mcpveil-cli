@@ -1,118 +1,83 @@
 import type { ScanContext } from "../engine/scanner.js";
-import { planCalls } from "../engine/argPlanner.js";
-import { callToolSafe } from "../engine/executor.js";
+import { planCalls, benignValue } from "../engine/argPlanner.js";
 import { analyze, verboseErrorFinding, fingerprint } from "../engine/analyzer.js";
-import {
-  COMMAND_INJECTION_PAYLOADS, commandPayloadArgs, COMMAND_SIGNALS,
-  SQL_INJECTION_PAYLOADS, SQL_ERROR_SIGNALS,
-} from "../payloads/injection.js";
+import { commandPayloadArgs, COMMAND_SIGNALS, SQL_INJECTION_PAYLOADS, SQL_ERROR_SIGNALS } from "../payloads/injection.js";
 
-const CMD_REMEDIATION =
-  "Never pass user input to shell interpreters. Use execFile/spawn without a shell, validate against strict allowlists, and prefer library-native operations over shelling out.";
-
-const SQL_REMEDIATION =
-  "Use parameterized queries / prepared statements for every query containing user input; reject string-concatenated SQL; least-privilege the DB user.";
+const CMD_REMEDIATION = "Use execFile/spawn without a shell, strict argument allowlists, or library-native operations. Never interpolate untrusted input into shell commands.";
+const SQL_REMEDIATION = "Use parameterized queries or prepared statements and a least-privileged database account. Never concatenate input into SQL.";
 
 export async function runCommandInjection(ctx: ScanContext): Promise<void> {
-  const { inv, config } = ctx;
-  const payloadValues = commandPayloadArgs();
-
-  for (const tool of inv.tools) {
-    const calls = planCalls(tool, "command", payloadValues, config.maxCallsPerTool);
-    for (const call of calls) {
-      const outcome = await callToolSafe(ctx.session.client, tool.name, call.args, config.timeoutMs);
-      ctx.countInvocation("command-injection");
-      if (outcome.error) { ctx.registerError("command-injection", `${tool.name}: ${outcome.error}`); continue; }
-
-      const f = analyze({
-        checkId: "command-injection", tool: tool.name,
-        payload: call.args[call.attacked[0]!] as string,
-        responseText: outcome.text,
-        signals: COMMAND_SIGNALS,
-        severity: "critical",
-        title: `OS command injection confirmed in tool '${tool.name}' (argument '${call.attacked[0]}')`,
-        remediation: CMD_REMEDIATION,
+  if (!ctx.active) return;
+  for (const tool of ctx.inv.tools) {
+    for (const call of planCalls(tool, "command", commandPayloadArgs(), ctx.config.maxCallsPerTool)) {
+      const outcome = await ctx.invokeTool("command-injection", tool.name, call.args);
+      if (!outcome.ok) continue;
+      const finding = analyze({
+        checkId: "command-injection", tool: tool.name, payload: JSON.stringify(call.args),
+        responseText: outcome.text, signals: COMMAND_SIGNALS, severity: "critical",
+        title: `Decoded command marker returned by '${tool.name}'`, remediation: CMD_REMEDIATION,
       });
-      if (f) ctx.emit(f);
+      if (finding) ctx.emit(finding);
     }
   }
 }
 
 export async function runSqlInjection(ctx: ScanContext): Promise<void> {
-  const { inv, config } = ctx;
-  const payloadValues = SQL_INJECTION_PAYLOADS.map((p) => p.arg);
-
-  for (const tool of inv.tools) {
-    const calls = planCalls(tool, "sql", payloadValues, config.maxCallsPerTool);
-    if (calls.length === 0) continue;
-
-    // baseline: benign call to compare row counts for tautology detection
-    const benignArgs: Record<string, unknown> = {};
-    for (const p of tool.properties) benignArgs[p.name] = benignOf(p);
-    const benign = await callToolSafe(ctx.session.client, tool.name, benignArgs, config.timeoutMs);
+  if (!ctx.active) return;
+  for (const tool of ctx.inv.tools) {
+    const calls = planCalls(tool, "sql", SQL_INJECTION_PAYLOADS.map((payload) => payload.arg), ctx.config.maxCallsPerTool);
+    if (!calls.length) continue;
+    const benignArgs = Object.fromEntries(tool.properties.map((property) => [property.name, benignValue(property)]));
+    const benign = await ctx.invokeTool("sql-injection", tool.name, benignArgs);
     const benignRows = extractRows(benign.structured ?? benign.text);
-
+    const outcomes = new Map<string, { rows: number; ok: boolean; echoed: boolean }>();
     for (const call of calls) {
-      const outcome = await callToolSafe(ctx.session.client, tool.name, call.args, config.timeoutMs);
-      ctx.countInvocation("sql-injection");
-      if (outcome.error) { ctx.registerError("sql-injection", `${tool.name}: ${outcome.error}`); continue; }
-
-      const f = analyze({
-        checkId: "sql-injection", tool: tool.name,
-        payload: call.args[call.attacked[0]!] as string,
-        responseText: outcome.text,
-        signals: SQL_ERROR_SIGNALS,
-        severity: "high",
-        confidence: "suspicious", // error text alone is suggestive, row blast confirms
-        title: `SQL injection indicators in tool '${tool.name}' (argument '${call.attacked[0]}')`,
-        remediation: SQL_REMEDIATION,
+      const outcome = await ctx.invokeTool("sql-injection", tool.name, call.args);
+      if (!outcome.ok) continue;
+      const payload = JSON.stringify(call.args);
+      const input = call.args[call.attacked[0]!];
+      const value = typeof input === "string" ? input : JSON.stringify(input);
+      outcomes.set(`${call.placement ?? call.attacked[0]}:${value}`, {
+        rows: extractRows(outcome.structured ?? outcome.text), ok: !outcome.isError,
+        echoed: typeof value === "string" && outcome.text.includes(value),
       });
-      if (f) ctx.emit(f);
-
-      const rows = extractRows(outcome.structured ?? outcome.text);
-      const payload = call.args[call.attacked[0]!] as string;
-      if (benign.ok && outcome.ok && benignRows >= 0 && rows > benignRows) {
+      const finding = analyze({
+        checkId: "sql-injection", tool: tool.name, payload, responseText: outcome.text,
+        signals: SQL_ERROR_SIGNALS, severity: "high", confidence: "suspicious",
+        title: `SQL error indicators in '${tool.name}'`, remediation: SQL_REMEDIATION,
+      });
+      if (finding) ctx.emit(finding);
+      if (outcome.isError) {
+        const verbose = verboseErrorFinding("sql-injection", tool.name, payload, outcome.text);
+        if (verbose) ctx.emit(verbose);
+      }
+    }
+    const trueInput = SQL_INJECTION_PAYLOADS[0]!.arg;
+    const falseInput = SQL_INJECTION_PAYLOADS[1]!.arg;
+    for (const [key, positive] of outcomes) {
+      if (!key.endsWith(`:${trueInput}`)) continue;
+      const negative = outcomes.get(key.slice(0, -trueInput.length) + falseInput);
+      if (benign.ok && positive.ok && negative?.ok && !positive.echoed && benignRows >= 0 &&
+          positive.rows > benignRows && positive.rows > negative.rows && negative.rows === benignRows) {
         ctx.emit({
-          checkId: "sql-injection",
-          tool: tool.name,
-          payload,
-          evidence: `tautology returned ${rows} rows vs ${benignRows} for benign input`,
-          severity: "critical",
-          confidence: "confirmed",
-          title: `SQL injection (tautology row-blast) confirmed in tool '${tool.name}'`,
-          remediation: SQL_REMEDIATION,
-          fingerprint: fingerprint(["sql-injection", tool.name, payload, "row-blast"]),
+          checkId: "sql-injection", tool: tool.name, payload: trueInput,
+          evidence: `Paired read-only probes: true condition ${positive.rows} rows; false condition ${negative.rows}; benign ${benignRows}`,
+          severity: "critical", confidence: "confirmed", title: `SQL boolean differential confirmed in '${tool.name}'`,
+          remediation: SQL_REMEDIATION, fingerprint: fingerprint(["sql-injection", tool.name, key, "boolean-differential"]),
         });
       }
-
-      // SQLi handlers that crash may leak stacks — worth an info note.
-      const verr = outcome.isError
-        ? verboseErrorFinding("sql-injection", tool.name, payload, outcome.text)
-        : null;
-      if (verr) ctx.emit(verr);
     }
   }
 }
 
-function extractRows(structuredOrText: unknown): number {
-  if (typeof structuredOrText === "string") {
-    const m = structuredOrText.match(/"rows"\s*:\s*(\d+)/);
-    return m ? parseInt(m[1], 10) : -1;
+function extractRows(value: unknown): number {
+  if (typeof value === "string") {
+    try { return extractRows(JSON.parse(value)); } catch { return -1; }
   }
-  const s = structuredOrText as { rows?: unknown; results?: unknown[]; users?: unknown[]; items?: unknown[] } | null;
-  if (s && typeof s === "object") {
-    if (typeof s.rows === "number") return s.rows;
-    if (Array.isArray(s.results)) return s.results.length;
-    if (Array.isArray(s.users)) return s.users.length;
-    if (Array.isArray(s.items)) return s.items.length;
+  if (value && typeof value === "object") {
+    const data = value as Record<string, unknown>;
+    if (typeof data.rows === "number" && Number.isFinite(data.rows) && data.rows >= 0) return data.rows;
+    for (const key of ["results", "users", "items"]) if (Array.isArray(data[key])) return data[key].length;
   }
   return -1;
-}
-
-function benignOf(p: { type: string; enum?: string[] }): unknown {
-  if (p.enum?.length) return p.enum[0];
-  if (p.type === "number" || p.type === "integer") return 1;
-  if (p.type === "boolean") return false;
-  if (p.type === "string") return "mcpveil";
-  return null;
 }

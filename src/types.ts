@@ -18,6 +18,8 @@ export interface ScanTarget {
   url?: string;
   /** extra env for stdio spawn */
   env?: Record<string, string>;
+  /** Explicitly forward these environment variables. Other credentials are not inherited. */
+  inheritEnv?: string[];
 }
 
 export interface ToolSchemaProperty {
@@ -50,8 +52,10 @@ export interface ResourceInfo {
 export interface Inventory {
   tools: ToolInfo[];
   resources: ResourceInfo[];
-  prompts: { name: string; description?: string }[];
+  prompts: { name: string; description?: string; arguments?: { name: string; required?: boolean }[] }[];
   serverInfo?: { name?: string; version?: string };
+  instructions?: string;
+  errors?: string[];
 }
 
 export interface Finding {
@@ -83,9 +87,22 @@ export interface CheckResult {
   invocations: number;      // tool calls made (0 for static)
   errors: string[];         // transport/timeout errors encountered (non-fatal)
   skipped?: string;         // reason if check did not run
+  limitations?: string[];
+  resourceReads?: number;
 }
 
 export interface ScanReport {
+  schemaVersion: "2.0";
+  status: "complete" | "partial" | "failed";
+  mode: "active" | "inventory";
+  errors: string[];
+  coverage: {
+    excludedTools: string[];
+    untestedTools: string[];
+    limitations: string[];
+    toolCalls: Record<string, number>;
+    resourceReads: number;
+  };
   target: ScanTarget;
   serverInfo?: { name?: string; version?: string };
   startedAt: string;
@@ -93,7 +110,8 @@ export interface ScanReport {
   inventorySizes: { tools: number; resources: number; prompts: number };
   results: CheckResult[];
   findings: Finding[];
-  score: { value: number; grade: "A" | "B" | "C" | "D" | "F" };
+  /** No security grade is assigned to incomplete or metadata-only assessments. */
+  score: { value: number; grade: "A" | "B" | "C" | "D" | "F" } | null;
   mcpveilVersion: string;
 }
 
@@ -101,6 +119,7 @@ export interface ForgeConfig {
   checks: Partial<Record<CheckId, boolean>>;
   failOn: Severity | "never";
   timeoutMs: number;
+  scanTimeoutMs: number;
   maxCallsPerTool: number;
   allowTools: string[];          // never touched by active pass
   ssrfCollaboratorUrl?: string;  // optional out-of-band callback base

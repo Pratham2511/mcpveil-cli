@@ -1,7 +1,7 @@
 # Publishing MCPVeil to npm
 
-The next release is `mcpveil-cli@0.1.3`. Merging its PR runs CI; publishing a
-GitHub release with tag `v0.1.3` starts `.github/workflows/publish.yml`.
+The next release is `mcpveil-cli@0.2.0`. Merging its PR runs CI; publishing a
+GitHub release with tag `v0.2.0` starts `.github/workflows/publish.yml`.
 The workflow requires the tagged commit to be on `main` and its version to
 match `package.json`. It runs dependency checks, lint, tests, and a fresh
 package-install check before publishing to npmjs.com.
@@ -31,14 +31,14 @@ owner, correct the Repository field to its name only before publishing.
 
 1. Review and merge the security/release PR after all checks pass.
 2. Complete the trusted-publisher setup above.
-3. Create a GitHub release from `main` with tag `v0.1.3`, then publish it.
+3. Create a GitHub release from `main` with tag `v0.2.0`, then publish it.
 4. Check the **Publish to npm** workflow and the package's npm page.
 
 From an authenticated GitHub CLI checkout of this repository, the release
 command is:
 
 ```bash
-gh release create v0.1.3 --target main --title v0.1.3 --generate-notes
+gh release create v0.2.0 --target main --title v0.2.0 --generate-notes
 ```
 
 This triggers `npm publish` inside GitHub Actions, where OIDC is available.
