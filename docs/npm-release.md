@@ -1,7 +1,7 @@
 # Publishing MCPVeil to npm
 
-The next release is `mcpveil-cli@0.4.0`. Merging its PR runs CI; publishing a
-GitHub release with tag `v0.4.0` starts `.github/workflows/publish.yml`.
+The next release is `mcpveil-cli@0.4.1`. Merging its PR runs CI; publishing a
+GitHub release with tag `v0.4.1` starts `.github/workflows/publish.yml`.
 The workflow requires the tagged commit to be on `main` and its version to
 match `package.json`. It runs dependency checks, lint, tests, and a fresh
 package-install check before publishing to npmjs.com.
@@ -31,14 +31,14 @@ owner, correct the Repository field to its name only before publishing.
 
 1. Review and merge the security/release PR after all checks pass.
 2. Complete the trusted-publisher setup above.
-3. Create a GitHub release from `main` with tag `v0.4.0`, then publish it.
+3. Create a GitHub release from `main` with tag `v0.4.1`, then publish it.
 4. Check the **Publish to npm** workflow and the package's npm page.
 
 From an authenticated GitHub CLI checkout of this repository, the release
 command is:
 
 ```bash
-gh release create v0.4.0 --target main --title v0.4.0 --generate-notes
+gh release create v0.4.1 --target main --title v0.4.1 --generate-notes
 ```
 
 This triggers `npm publish` inside GitHub Actions, where OIDC is available.
@@ -78,3 +78,10 @@ Release validation builds and tests the tarball in a job without OIDC publishing
 permission. A separate publisher downloads that immutable workflow artifact,
 verifies its SHA-256 and publishes with lifecycle scripts disabled. Keep the
 trusted publisher workflow filename `publish.yml`.
+
+Release packages are staged by `scripts/pack-release.mjs`: development dependencies,
+development lifecycle scripts and development-only shrinkwrap entries are omitted.
+The tracked contributor manifest/lock are left intact. `npm run pack:release`
+produces that same tarball for inspection. Publish a GitHub release for OIDC, or
+publish the tested tarball explicitly; direct publication of the source directory
+is rejected because its lock includes development-only entries.
