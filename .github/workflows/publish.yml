@@ -37,7 +37,7 @@ jobs:
       - name: Build release artifact
         run: |
           mkdir release-artifact
-          npm pack --ignore-scripts --pack-destination release-artifact
+          node scripts/pack-release.mjs release-artifact
           cd release-artifact
           sha256sum *.tgz > SHA256SUMS
       - uses: actions/upload-artifact@v4

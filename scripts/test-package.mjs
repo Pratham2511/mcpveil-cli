@@ -1,3 +1,4 @@
+import { stageRelease } from "./release-artifact.mjs";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync, symlinkSync } from "node:fs";
@@ -33,7 +34,9 @@ function npm(args, cwd) {
 }
 
 try {
-  const [pack] = JSON.parse(npm(["pack", "--json", "--ignore-scripts", "--pack-destination", scratch], root));
+  const stage = join(scratch, "stage");
+  stageRelease(root, stage);
+  const [pack] = JSON.parse(npm(["pack", "--json", "--ignore-scripts", "--pack-destination", scratch], stage));
   const files = new Set(pack.files.map(({ path }) => path));
   for (const required of ["package.json", "npm-shrinkwrap.json", "bin/mcpveil.js", "dist/cli.js", "dist/index.js", "dist/version.js"]) {
     assert(files.has(required), `Published package is missing ${required}`);
@@ -47,8 +50,15 @@ try {
   }
 
   writeFileSync(join(scratch, "package.json"), JSON.stringify({ name: "mcpveil-package-smoke", private: true, version: "0.0.0" }));
-  npm(["install", join(scratch, pack.filename), "--engine-strict", "--omit=dev", "--no-audit", "--no-fund"]);
+  npm(["install", join(scratch, pack.filename), "--engine-strict", "--ignore-scripts", "--no-audit", "--no-fund"]);
+  npm(["ls", "--omit=dev", "--all", "--json"]); // fails on any extraneous/development tree
   const installed = join(scratch, "node_modules", manifest.name);
+  const installedManifest = JSON.parse(readFileSync(join(installed, "package.json"), "utf8"));
+  assert.equal(installedManifest.devDependencies, undefined);
+  assert.equal(installedManifest.scripts, undefined);
+  const installedLock = JSON.parse(readFileSync(join(installed, "npm-shrinkwrap.json"), "utf8"));
+  assert(Object.values(installedLock.packages).every((entry) => !entry.dev), "Development packages leaked into the installed lock");
+  for (const path of Object.keys(installedLock.packages)) assert(!/node_modules\/(?:@modelcontextprotocol\/sdk|qs|hono|ip-address|vitest|typescript|tsx)$/.test(path), `Unexpected development dependency: ${path}`);
   const lock = JSON.parse(readFileSync(join(scratch, "package-lock.json"), "utf8"));
   assertPatchedDependencies(lock.packages);
   assert.equal(run(runtime, [join(installed, "bin/mcpveil.js"), "--version"]).trim(), manifest.version);
