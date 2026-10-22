@@ -18,7 +18,7 @@ an LLM or analysis-service API key.
 Use **Node >=22.12.0**; Node 22 and 24 LTS are tested. Node 18/20 are unsupported.
 
 ```bash
-npm install --global mcpveil-cli
+npm install --global mcpveil-cli@0.4.1
 mcpveil doctor
 mcpveil --version
 
@@ -160,6 +160,8 @@ npm ci
 npm run lint
 npm test
 npm run test:package
+# Produce a production-only tarball for manual inspection:
+npm run pack:release
 # Run synthetic targets in the disposable sandbox described above:
 npm run benchmark -- docs/benchmark.json
 ```
@@ -282,3 +284,7 @@ onboarding, authenticated transports, baselines and tool-drift work.
 [MIT](LICENSE). Report vulnerabilities privately through the repository's
 Security tab; see [SECURITY.md](SECURITY.md). Do not post reports containing real
 credentials or private application data.
+
+Release tarballs use a staged production-only shrinkwrap; the development lock
+remains intact for contributors. `npm run test:package` checks a normal consumer
+install (without `--omit=dev`) and rejects extraneous/development dependencies.

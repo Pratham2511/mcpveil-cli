@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1
+
+- Stage a production-only manifest and shrinkwrap before release packing. Normal npm installs no longer receive extraneous development tools or legacy server dependencies.
+- Verify a normal clean consumer install with `npm ls --all`, retaining CLI/API/Action smoke checks. The contributor lockfile remains unchanged by packaging.
+
 ## 0.4.0
 
 - Official stable SDK v2 client with explicit modern `2026-07-28`, auto and legacy modes; v1 retained only in compatibility fixtures.

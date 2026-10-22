@@ -13,7 +13,7 @@ steps:
   - uses: actions/setup-node@v7
     with: { node-version: '22', package-manager-cache: false }
   - run: npm ci
-  - run: npm install --global mcpveil-cli@0.4.0 --ignore-scripts --engine-strict
+  - run: npm install --global mcpveil-cli@0.4.1 --ignore-scripts --engine-strict
   - run: >-
       mcpveil scan --stdio "node dist/test-server.js" --yes
       --format sarif --output report.sarif
@@ -33,13 +33,13 @@ synthetic fixtures on forks; do not supply deployment secrets to untrusted PRs.
 
 Replace `owner/repository` below with this project's GitHub repository, then pin
 an audited release commit SHA in production. The action installs the exact
-`mcpveil-cli@0.4.0` release without lifecycle scripts and invokes its CLI through
+`mcpveil-cli@0.4.1` release without lifecycle scripts and invokes its CLI through
 argv, without interpolating target strings into a shell.
 
 ```yaml
 - name: Security regression scan
   id: veil
-  uses: owner/repository@v0.4.0
+  uses: owner/repository@v0.4.1
   env:
     MCP_TEST_TOKEN: ${{ secrets.MCP_TEST_TOKEN }}
   with:

@@ -59,7 +59,7 @@ runs:
         package-manager-cache: false
     - name: Install pinned scanner without lifecycle scripts
       shell: bash
-      run: npm install --prefix "$RUNNER_TEMP/mcpveil-action" mcpveil-cli@0.4.0 --ignore-scripts --engine-strict --no-audit --no-fund
+      run: npm install --prefix "$RUNNER_TEMP/mcpveil-action" mcpveil-cli@0.4.1 --ignore-scripts --engine-strict --no-audit --no-fund
     - id: scan
       name: Scan the authorized target
       shell: bash
