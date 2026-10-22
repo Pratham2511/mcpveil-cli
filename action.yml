@@ -1,0 +1,81 @@
+name: MCPVeil security regression scan
+description: Run bounded local MCP security checks and produce JSON/SARIF reports.
+author: MCPVeil contributors
+inputs:
+  authorized:
+    description: Set true only for an explicitly authorized disposable target.
+    required: true
+    default: 'false'
+  stdio:
+    description: Exact target argv string. No shell expansion. Choose stdio or url.
+    required: false
+  url:
+    description: Authorized HTTP(S) MCP endpoint.
+    required: false
+  config:
+    description: Optional configuration path.
+    required: false
+  bearer-env:
+    description: Environment variable name holding a restricted test bearer token.
+    required: false
+  header-env:
+    description: Optional JSON object mapping header names to environment variable names.
+    required: false
+    default: '{}'
+  forward-env:
+    description: JSON array of environment variable names explicitly forwarded to stdio targets.
+    default: '[]'
+  protocol:
+    description: legacy, auto, or 2026-07-28.
+    default: legacy
+  auth-policy:
+    description: Optional required or public HTTP authentication expectation.
+    required: false
+  check-origin:
+    description: Probe rejection of an untrusted Origin.
+    default: 'false'
+  baseline:
+    description: Reviewed baseline path.
+    required: false
+  snapshot:
+    description: Reviewed hashed tool snapshot path.
+    required: false
+  target-id:
+    description: Logical server and authorization context for policy artifacts.
+    required: false
+outputs:
+  json:
+    description: Absolute JSON report path.
+    value: ${{ steps.scan.outputs.json }}
+  sarif:
+    description: Absolute SARIF report path.
+    value: ${{ steps.scan.outputs.sarif }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v7
+      with:
+        node-version: '22'
+        package-manager-cache: false
+    - name: Install pinned scanner without lifecycle scripts
+      shell: bash
+      run: npm install --prefix "$RUNNER_TEMP/mcpveil-action" mcpveil-cli@0.4.0 --ignore-scripts --engine-strict --no-audit --no-fund
+    - id: scan
+      name: Scan the authorized target
+      shell: bash
+      env:
+        MCPVEIL_ACTION_PATH: ${{ github.action_path }}
+        MCPVEIL_ACTION_AUTHORIZED: ${{ inputs.authorized }}
+        MCPVEIL_ACTION_STDIO: ${{ inputs.stdio }}
+        MCPVEIL_ACTION_URL: ${{ inputs.url }}
+        MCPVEIL_ACTION_CONFIG: ${{ inputs.config }}
+        MCPVEIL_ACTION_BEARER: ${{ inputs.bearer-env }}
+        MCPVEIL_ACTION_HEADERS: ${{ inputs.header-env }}
+        MCPVEIL_ACTION_FORWARD_ENV: ${{ inputs.forward-env }}
+        MCPVEIL_ACTION_PROTOCOL: ${{ inputs.protocol }}
+        MCPVEIL_ACTION_AUTH_POLICY: ${{ inputs.auth-policy }}
+        MCPVEIL_ACTION_ORIGIN: ${{ inputs.check-origin }}
+        MCPVEIL_ACTION_BASELINE: ${{ inputs.baseline }}
+        MCPVEIL_ACTION_SNAPSHOT: ${{ inputs.snapshot }}
+        MCPVEIL_ACTION_TARGET_ID: ${{ inputs.target-id }}
+      run: node "$MCPVEIL_ACTION_PATH/scripts/action.mjs"

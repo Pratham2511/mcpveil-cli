@@ -4,7 +4,7 @@ import type { ForgeConfig } from "../types.js";
 
 const SeveritySchema = z.enum(["critical", "high", "medium", "low", "info", "never"]);
 
-export const CHECK_IDS = ["path-traversal", "command-injection", "sql-injection", "ssrf", "credential-leak", "prompt-injection"] as const;
+export const CHECK_IDS = ["path-traversal", "command-injection", "sql-injection", "ssrf", "credential-leak", "prompt-injection", "transport-security"] as const;
 
 const ConfigSchema = z.strictObject({
   checks: z.partialRecord(z.enum(CHECK_IDS), z.boolean()).default({}),

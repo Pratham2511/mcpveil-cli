@@ -37,8 +37,9 @@ src/
   types.ts            shared contracts — start here
   config/loader.ts    zod-validated config merge
   transports/         stdio | streamable-http | sse (SDK-based)
-  engine/             inventory, argPlanner, executor, analyzer, scanner
-  checks/             the six registered checks
+  engine/             inventory, bounded schema/argument planning, executor, analyzer, scanner
+  policy.ts           scoped baselines and hashed drift snapshots
+  checks/             six content checks plus optional HTTP access policy
   payloads/           pure data: payload packs + signal sets
   report/             terminal | json | sarif | score
 test/
@@ -99,7 +100,9 @@ Most contributions are new entries in `src/payloads/*`. Rules:
 3. Respect `ctx.active` — static-only checks must not invoke tools.
 4. Plant matching vulnerabilities in the vulnerable server and add a
    counterpart defense to the safe server.
-5. Update the harness's `REQUIRED_CHECKS` and add unit locks.
+5. Add an independent positive/control fixture and unit locks. Core content
+   checks belong in the reference harness; opt-in transport policies use the
+   modern HTTP admission fixtures.
 
 ## Review process
 
@@ -127,3 +130,8 @@ scrub before pasting. Suspected vulnerabilities in MCPVeil itself go through
 MCPVeil is a defensive testing tool. Only scan servers you own or have
 written permission to test. PRs that add capability designed to attack
 third-party systems will be rejected.
+
+Modern transport tests use the official SDK v2 serving entries. Legacy v1 fixtures
+remain process-isolated compatibility controls. `npm run test:package` also runs
+the real Action launcher against its exact packed install. Run benchmarks inside
+the disposable sandbox; committed timings are measurements of that run, not SLAs.

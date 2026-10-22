@@ -1,4 +1,4 @@
-import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import type { Client } from "@modelcontextprotocol/client";
 import type { Inventory, ToolInfo, ToolSchemaProperty } from "../types.js";
 
 import { parseSchema } from "./schema.js";
@@ -14,11 +14,15 @@ export async function inventory(client: Client, opts: { timeoutMs?: number; sign
     if (cursor) seen.add(`${kind}:${cursor}`);
   };
   const tools: ToolInfo[] = [];
+  const toolNames = new Set<string>();
   let cursor: string | undefined;
   if (capabilities?.tools) do {
     guardCursor("tools", cursor, tools.length);
-    const res = await client.listTools(cursor ? { cursor } : undefined, options);
+    const res = await client.request({ method: "tools/list", params: cursor ? { cursor } : {} }, options);
     for (const t of res.tools) {
+      if (tools.length >= 1000) throw new Error("tools inventory exceeds 1000 items");
+      if (toolNames.has(t.name)) throw new Error("tools inventory contains duplicate names");
+      toolNames.add(t.name);
       const parsed = parseSchema((t.inputSchema ?? {}) as Record<string, unknown>);
       tools.push({
         name: t.name,
@@ -36,8 +40,9 @@ export async function inventory(client: Client, opts: { timeoutMs?: number; sign
     let rc: string | undefined;
     do {
       guardCursor("resources", rc, resources.length);
-      const res = await client.listResources(rc ? { cursor: rc } : undefined, options);
+      const res = await client.request({ method: "resources/list", params: rc ? { cursor: rc } : {} }, options);
       for (const r of res.resources) {
+        if (resources.length >= 1000) throw new Error("resources inventory exceeds 1000 items");
         resources.push({ uri: r.uri, name: r.name, description: r.description, mimeType: r.mimeType });
       }
       rc = res.nextCursor;
@@ -51,13 +56,16 @@ export async function inventory(client: Client, opts: { timeoutMs?: number; sign
     let pc: string | undefined;
     do {
       guardCursor("prompts", pc, prompts.length);
-      const res = await client.listPrompts(pc ? { cursor: pc } : undefined, options);
-      for (const p of res.prompts) prompts.push({ name: p.name, description: p.description, arguments: p.arguments });
+      const res = await client.request({ method: "prompts/list", params: pc ? { cursor: pc } : {} }, options);
+      for (const p of res.prompts) {
+        if (prompts.length >= 1000) throw new Error("prompts inventory exceeds 1000 items");
+        prompts.push({ name: p.name, description: p.description, arguments: p.arguments });
+      }
       pc = res.nextCursor;
     } while (pc);
   } catch (err) {
     errors.push(`prompts inventory failed: ${err instanceof Error ? err.message : String(err)}`);
   }
 
-  return { tools, resources, prompts, errors, serverInfo: client.getServerVersion(), instructions: client.getInstructions() };
+  return { tools, resources, prompts, errors, serverInfo: client.getServerVersion(), protocolEra: client.getProtocolEra(), instructions: client.getInstructions() };
 }

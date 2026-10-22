@@ -1,6 +1,6 @@
 {
   "name": "mcpveil-cli",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Deterministic security test suite for MCP servers: sends real payloads through live MCP sessions and confirms exploitability from responses. CI-native with SARIF 2.1.0 output for GitHub Code Scanning.",
   "type": "module",
   "license": "MIT",
@@ -59,16 +59,19 @@
     "owasp"
   ],
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.32.1",
     "cli-table3": "^0.6.5",
     "commander": "^15.0.0",
     "picocolors": "^1.1.1",
-    "zod": "^4.6.5"
+    "zod": "^4.6.5",
+    "@modelcontextprotocol/client": "^2.3.1"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",
     "tsx": "^4.19.0",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@modelcontextprotocol/server": "^2.3.1",
+    "@modelcontextprotocol/node": "^2.1.1"
   }
 }

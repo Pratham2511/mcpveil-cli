@@ -33,3 +33,8 @@ it("preserves numeric tool-call counts when a tool name contains secret", () => 
 it("masks opaque credentials in JSON excerpts", () => {
   expect(redactText('{"accessToken":"opaque-private-value","safe":"public"}')).not.toContain("opaque-private-value");
 });
+
+it("keeps ordinary security prose readable while masking assigned credentials", () => {
+  expect(redactText("Secret Exposure and tool-level authorization and OAuth")).toBe("Secret Exposure and tool-level authorization and OAuth");
+  expect(redactText("password=opaque-sensitive-value --token other-sensitive-value")).not.toMatch(/opaque-sensitive-value|other-sensitive-value/);
+});
