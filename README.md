@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.svg" width="110" alt="MCPVeil logo — a shield with an active scan beam" />
+</p>
+
 # MCPVeil
 
 **Local security regression tests for Model Context Protocol servers.**
