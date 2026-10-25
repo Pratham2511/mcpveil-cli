@@ -1,6 +1,6 @@
 // test/unit/argPlanner.test.ts
 import { describe, it, expect } from "vitest";
-import { classifyArg, planCalls } from "../../src/engine/argPlanner.js";
+import { classifyArg, planCalls, benignValue } from "../../src/engine/argPlanner.js";
 import { isExcluded } from "../../src/engine/scanner.js";
 import type { ToolInfo } from "../../src/types.js";
 
@@ -26,11 +26,51 @@ it("classifies path args", () => {
   expect(classifyArg(tool.properties[0])).toBe("path");
 });
 
-it("places payloads into the matching arg and fills benigns", () => {
+it("places payloads into the attacked arg and omits optional siblings", () => {
   const calls = planCalls(tool, "path", ["../x", "/etc/x"], 12);
   expect(calls.length).toBe(2);
-  expect(calls[0].args.path).toBe("../x");
-  expect(calls[0].args.limit).toBe(1); // benign number
+  // Optional `limit` is never filled: official servers reject combinations
+  // like head+tail, and a rejected probe tests nothing.
+  expect(calls[0].args).toEqual({ path: "../x" });
+});
+
+it("fills required siblings with format-valid benign values", () => {
+  const multi: ToolInfo = {
+    name: "fetch_report",
+    description: "Fetch a generated report",
+    inputSchema: {},
+    properties: [
+      { name: "path", type: "string", description: "report file", required: true },
+      { name: "since", type: "string", format: "date-time", required: true },
+      { name: "contact", type: "string", format: "email", required: true },
+      { name: "retries", type: "integer", minimum: 2, required: true },
+    ],
+    requiredArgNames: ["path", "since", "contact", "retries"],
+  };
+  const [call] = planCalls(multi, "path", ["../x"], 3);
+  expect(call.args).toEqual({
+    path: "../x",
+    since: "2026-01-01T00:00:00Z",
+    contact: "mcpveil@example.com",
+    retries: 2,
+  });
+});
+
+it("benignValue satisfies known string formats", () => {
+  for (const [format, value] of [
+    ["date", "2026-01-01"],
+    ["date-time", "2026-01-01T00:00:00Z"],
+    ["time", "00:00:00Z"],
+    ["email", "mcpveil@example.com"],
+    ["uri", "https://mcpveil.example"],
+    ["uuid", "00000000-0000-4000-8000-000000000000"],
+    ["ipv4", "127.0.0.1"],
+    ["ipv6", "::1"],
+    ["hostname", "mcpveil.example"],
+  ] as const) {
+    expect(benignValue({ name: "v", type: "string", required: true, format })).toBe(value);
+  }
+  expect(benignValue({ name: "v", type: "string", required: true, format: "byte" })).toBe("mcpveil");
 });
 
 it("caps calls at maxCalls", () => {

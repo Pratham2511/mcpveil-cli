@@ -1,4 +1,5 @@
 import type { ToolSchemaProperty } from "../types.js";
+import { FORMAT_VALUES } from "./argPlanner.js";
 
 type Schema = Record<string, any>;
 /** Deliberately bounded subset of JSON Schema; no untrusted regular expressions. */
@@ -29,7 +30,7 @@ export function parseSchema(root: Schema): { properties: ToolSchemaProperty[]; l
       if (variants.filter((v: any) => v?.type !== "null").length > 1) limitations.add("only the first non-null schema alternative is probed");
       return parse(name, { ...Object.fromEntries(Object.entries(def).filter(([k]) => !["oneOf", "anyOf"].includes(k))), ...branch }, required, depth + 1, refs);
     }
-    for (const key of ["allOf", "not", "if", "then", "else", "pattern", "patternProperties", "dependentSchemas", "prefixItems", "contains", "unevaluatedProperties", "format", "multipleOf", "exclusiveMinimum", "exclusiveMaximum", "minProperties", "maxProperties", "uniqueItems"])
+    for (const key of ["allOf", "not", "if", "then", "else", "pattern", "patternProperties", "dependentSchemas", "prefixItems", "contains", "unevaluatedProperties", "multipleOf", "exclusiveMinimum", "exclusiveMaximum", "minProperties", "maxProperties", "uniqueItems"])
       if (def[key] !== undefined) limitations.add(`unsupported schema constraint: ${key}`);
     let type = def.type ?? (def.properties ? "object" : def.enum?.length ? typeof def.enum[0] : typeof def.const);
     if (Array.isArray(type)) {
@@ -39,6 +40,12 @@ export function parseSchema(root: Schema): { properties: ToolSchemaProperty[]; l
     }
     if (!["object", "array", "string", "integer", "number", "boolean", "null"].includes(type)) limitations.add("unsupported or unspecified schema type");
     const p: ToolSchemaProperty = { name, type, required, description: typeof def.description === "string" ? def.description : undefined };
+    if (def.format !== undefined) {
+      if (type === "string" && typeof def.format === "string") {
+        p.format = def.format;
+        if (FORMAT_VALUES[def.format] === undefined) limitations.add(`unsupported string format: ${def.format}`);
+      } else limitations.add("unsupported schema constraint: format");
+    }
     if (Array.isArray(def.enum)) p.enum = def.enum.slice(0, 32);
     if (Object.hasOwn(def, "const")) p.constValue = def.const;
     for (const key of ["minimum", "maximum", "minLength", "maxLength", "minItems", "maxItems"] as const)

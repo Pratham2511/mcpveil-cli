@@ -16,6 +16,25 @@ export function classifyArg(p: ToolSchemaProperty): ArgIntent {
   return "neutral";
 }
 
+/**
+ * Valid literals for the `format` hints we can satisfy. Servers validate
+ * formats (e.g. date or uri), and a padded filler would be rejected before a
+ * payload is ever evaluated. Unknown formats keep the padded default and are
+ * surfaced as schema limitations.
+ */
+export const FORMAT_VALUES: Record<string, string> = {
+  "date": "2026-01-01",
+  "date-time": "2026-01-01T00:00:00Z",
+  "time": "00:00:00Z",
+  "email": "mcpveil@example.com",
+  "uri": "https://mcpveil.example",
+  "url": "https://mcpveil.example",
+  "uuid": "00000000-0000-4000-8000-000000000000",
+  "ipv4": "127.0.0.1",
+  "ipv6": "::1",
+  "hostname": "mcpveil.example",
+};
+
 /** Required sibling fillers are bounded; constraints outside this subset are reported. */
 export function benignValue(p: ToolSchemaProperty): unknown {
   if (p.constValue !== undefined) return p.constValue;
@@ -25,7 +44,9 @@ export function benignValue(p: ToolSchemaProperty): unknown {
     case "boolean": return false;
     case "array": return p.items ? Array.from({ length: Math.min(8, p.maxItems ?? Infinity, Math.max(1, p.minItems ?? 0)) }, () => benignValue(p.items!)) : [];
     case "object": return Object.fromEntries((p.properties ?? []).filter((n) => n.required).map((n) => [n.name, benignValue(n)]));
-    case "string": return "mcpveil".padEnd(Math.min(4096, p.minLength ?? 0), "x").slice(0, p.maxLength ?? Infinity);
+    case "string":
+      if (p.format && FORMAT_VALUES[p.format] !== undefined) return FORMAT_VALUES[p.format]!;
+      return "mcpveil".padEnd(Math.min(4096, p.minLength ?? 0), "x").slice(0, p.maxLength ?? Infinity);
     default: return null;
   }
 }
@@ -57,7 +78,10 @@ export function planCalls(tool: ToolInfo, intent: ArgIntent, payloadValues: stri
   for (const target of targets) for (const value of payloadValues) {
     if (calls.length >= maxCalls) return calls;
     if (value.length < (target.leaf.minLength ?? 0) || value.length > (target.leaf.maxLength ?? Infinity)) continue;
-    const args = Object.fromEntries(tool.properties.filter((p) => p.name === target.root.name || p.required || ["string", "number", "integer", "boolean"].includes(p.type))
+    // Optional siblings are omitted: servers reject unknown combinations
+    // (e.g. head+tail), and a rejected probe tests nothing.
+    const args = Object.fromEntries(tool.properties
+      .filter((p) => p.name === target.root.name || p.required)
       .map((p) => [p.name, p.name === target.root.name ? target.build(value) : benignValue(p)]));
     calls.push({ tool, args, attacked: [target.root.name], intent, placement: target.path, value });
   }

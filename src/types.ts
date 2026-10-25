@@ -37,6 +37,8 @@ export interface ToolSchemaProperty {
   required: boolean;
   enum?: unknown[];
   constValue?: unknown;
+  /** strings only: JSON Schema `format` hint, honored by benign fillers when known */
+  format?: string;
   minimum?: number;
   maximum?: number;
   minLength?: number;

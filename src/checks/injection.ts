@@ -27,7 +27,9 @@ export async function runSqlInjection(ctx: ScanContext): Promise<void> {
   for (const tool of ctx.inv.tools) {
     const calls = planCalls(tool, "sql", SQL_INJECTION_PAYLOADS.map((payload) => payload.arg), ctx.config.maxCallsPerTool);
     if (!calls.length) continue;
-    const benignArgs = Object.fromEntries(tool.properties.map((property) => [property.name, benignValue(property)]));
+    // Baseline matches probe shape: required args only, so a server that
+    // rejects optional-argument combinations cannot skew the row comparison.
+    const benignArgs = Object.fromEntries(tool.properties.filter((property) => property.required).map((property) => [property.name, benignValue(property)]));
     const benign = await ctx.invokeTool("sql-injection", tool.name, benignArgs);
     const benignRows = extractRows(benign.structured ?? benign.text);
     const outcomes = new Map<string, { rows: number; ok: boolean; echoed: boolean }>();
