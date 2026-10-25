@@ -118,14 +118,16 @@ Most contributions are new entries in `src/payloads/*`. Rules:
 ## AI assistance policy
 
 AI-assisted contributions are welcome — a large share of this project's own
-history is AI-assisted and human-reviewed. Two rules keep that honest:
+history is AI-assisted and human-reviewed.
 
-1. **Disclose it** in the PR (the template has a section): which parts were
-   AI-assisted — code, tests, docs.
-2. **Own it**: read, understand, and take responsibility for every line you
-   submit as if you wrote it yourself. "The model wrote it" is not a defense
-   for a broken or unsafe change, and undisclosed bulk AI output will be
-   asked to complete disclosure before review proceeds.
+- **Disclosure is preferred, not required.** The PR template has an optional
+  section: if AI tools helped with code, tests, or docs, a note about which
+  parts is appreciated and helps reviewers focus. Choosing not to mention it
+  is fine.
+- **Ownership always applies.** Whatever tools you used, you review,
+  understand, and take responsibility for every line you submit as if you
+  wrote it yourself. "The model wrote it" is not a defense for a broken or
+  unsafe change.
 
 ## Code style
 
