@@ -135,3 +135,35 @@ Modern transport tests use the official SDK v2 serving entries. Legacy v1 fixtur
 remain process-isolated compatibility controls. `npm run test:package` also runs
 the real Action launcher against its exact packed install. Run benchmarks inside
 the disposable sandbox; committed timings are measurements of that run, not SLAs.
+
+## Commit identity and completed branches
+
+Before committing, configure this checkout with your own GitHub-linked identity.
+For privacy, copy your exact no-reply address from GitHub's email settings;
+do not invent or share a generic address. Automated coding tools must use the
+identity authorized by the person directing the work.
+
+```bash
+git config --local user.name "YOUR_GITHUB_LOGIN"
+git config --local user.email "YOUR_GITHUB_NO_REPLY_EMAIL"
+git var GIT_AUTHOR_IDENT
+git var GIT_COMMITTER_IDENT
+```
+
+Review the identity before committing and inspect author/co-author metadata
+before publishing. See GitHub's [commit email instructions](https://docs.github.com/en/account-and-profile/how-tos/email-preferences/setting-your-commit-email-address).
+
+After a PR is merged, remove its remote feature branch once its work is
+preserved in `main`. Squash merges and history corrections can change commit
+IDs; an old branch being reported as ahead does not by itself mean code is
+missing. Compare the actual changes with the merged PR before reintegrating it.
+
+If your local checkout predates a history correction, preserve uncommitted work
+and local-only commits before resynchronizing from current `main`. Do not merge
+or force-push the old history back into the default branch. A fresh checkout
+lets you retain the old copy for recovery while starting new work from `main`.
+
+GitHub's contributor sidebar is generated from commit attribution and can lag
+behind corrected history. If it remains stale after about 24 hours, the owner
+should [contact GitHub Support](https://docs.github.com/en/repositories/viewing-activity-and-data-for-your-repository/viewing-a-projects-contributors#contributor-data-is-stale-after-history-changes).
+Deleting and recreating the repository is not a required cleanup step.
