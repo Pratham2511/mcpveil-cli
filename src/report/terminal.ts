@@ -44,10 +44,9 @@ export function renderTerminal(report: ScanReport): string {
     lines.push("Full per-probe evidence: use --format json or --format sarif.\n");
   }
 
-  // per-check rollup with invocation counts
-  const roll = new Table({ head: ["Check", "Invocations", "Findings", "Errors", "Skipped"], style: { head: ["bold"], compact: true } });
+  const roll = new Table({ head: ["Check", "Invocations", "Probe fails", "Findings", "Errors", "Skipped"], style: { head: ["bold"], compact: true } });
   for (const r of report.results) {
-    roll.push([r.meta.id, String(r.invocations), String(r.findings.length), String(r.errors.length), r.skipped ?? "-"]);
+    roll.push([r.meta.id, String(r.invocations), String(r.probeFailures ?? 0), String(r.findings.length), String(r.errors.length), r.skipped ?? "-"]);
   }
   lines.push(roll.toString());
 

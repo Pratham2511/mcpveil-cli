@@ -105,10 +105,12 @@ export interface CheckResult {
   meta: CheckMeta;
   findings: Finding[];
   invocations: number;      // tool calls made (0 for static)
-  errors: string[];         // transport/timeout errors encountered (non-fatal)
+  errors: string[];         // check-level failures; every probe of a check failing is escalated here
   skipped?: string;         // reason if check did not run
   limitations?: string[];
   resourceReads?: number;
+  /** Probes (tool calls, resource reads, prompt gets) that failed at the transport layer without invalidating the check. */
+  probeFailures?: number;
   accessProbes?: { name: string; outcome: "accepted" | "rejected" | "unverified" }[];
 }
 
@@ -122,6 +124,8 @@ export interface ScanReport {
     untestedTools: string[];
     limitations: string[];
     toolCalls: Record<string, number>;
+    /** Failed probes per tool name / resource URI / prompt label. Partial failure does not change scan status. */
+    probeFailures: Record<string, number>;
     resourceReads: number;
     latencyMs?: { samples: number; p50: number; p95: number };
   };
