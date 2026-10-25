@@ -110,6 +110,24 @@ Most contributions are new entries in `src/payloads/*`. Rules:
   e2e accuracy harness against the CLI and fixture servers on supported Node 22/24.
 - One maintainer review for docs/tests; two for new checks or payloads.
 - Keep `src/` free of `any` leaks and LLM dependencies.
+- Pull requests follow the [PR template](.github/PULL_REQUEST_TEMPLATE.md):
+  summary with linked issue, what changed, testing evidence, a compatibility
+  note for anything touching a contract (report schema, exit codes, flags,
+  budgets), and the checklist.
+
+## AI assistance policy
+
+AI-assisted contributions are welcome — a large share of this project's own
+history is AI-assisted and human-reviewed.
+
+- **Disclosure is preferred, not required.** The PR template has an optional
+  section: if AI tools helped with code, tests, or docs, a note about which
+  parts is appreciated and helps reviewers focus. Choosing not to mention it
+  is fine.
+- **Ownership always applies.** Whatever tools you used, you review,
+  understand, and take responsibility for every line you submit as if you
+  wrote it yourself. "The model wrote it" is not a defense for a broken or
+  unsafe change.
 
 ## Code style
 
