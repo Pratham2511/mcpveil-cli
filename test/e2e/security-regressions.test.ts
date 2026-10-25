@@ -16,7 +16,7 @@ function scan(mode: string, options: string[] = [], config: Record<string, unkno
   const reportPath = join(root, "report.json");
   const eventsPath = join(root, "events.jsonl");
   const configPath = join(root, "config.json");
-  writeFileSync(configPath, JSON.stringify({ timeoutMs: 1000, ...config }));
+  writeFileSync(configPath, JSON.stringify({ timeoutMs: 10000, ...config }));
   try {
     const command = [RUNTIME, FIXTURE, mode, eventsPath].map((value) => JSON.stringify(value)).join(" ");
     const result = spawnSync(RUNTIME, [CLI, "scan", "--stdio", command, "--yes", "--format", format,
@@ -70,13 +70,13 @@ it("detects and masks opaque credentials identified by structured field names", 
 
 it("transport failures and timeouts cannot produce a clean score or successful SARIF", () => {
   for (const mode of ["errors", "hang"]) {
-    const result = scan(mode, [], { maxCallsPerTool: 1 });
+    const result = scan(mode, [], { timeoutMs: 1000, maxCallsPerTool: 1 });
     expect(result.status).toBe(2);
     expect(result.report!.status).toBe("partial");
     expect(result.report!.score).toBeNull();
     expect(result.report!.errors.length).toBeGreaterThan(0);
   }
-  const result = scan("errors", [], { maxCallsPerTool: 1 }, "sarif");
+  const result = scan("errors", [], { timeoutMs: 1000, maxCallsPerTool: 1 }, "sarif");
   expect(JSON.parse(result.body).runs[0].invocations[0].executionSuccessful).toBe(false);
 });
 
@@ -147,7 +147,7 @@ it("does not claim unverified collaborator callbacks or echo-based SSRF", () => 
 
 it("rejects hostile inventories, recursive schemas, and oversized or malformed wire data", () => {
   for (const mode of ["duplicate-tools", "many-tools", "cursor-loop", "malformed-inventory", "recursive-schema", "huge-content", "oversized-wire"]) {
-    const result = scan(mode, [], { maxCallsPerTool: 1 });
+    const result = scan(mode, [], { timeoutMs: 1000, maxCallsPerTool: 1 });
     expect(result.status, `${mode}: ${result.stderr}`).toBe(2);
     expect(result.report!.score).toBeNull();
     expect(result.report!.status).not.toBe("complete");
