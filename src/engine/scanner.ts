@@ -35,7 +35,7 @@ export function failureReport(target: ScanTarget, error: string, active = true, 
   return redactValue({
     schemaVersion: "2.0", status: "failed", mode: active ? "active" : "inventory", errors: [error],
     target: safeTarget(target), startedAt, durationMs: Date.now() - Date.parse(startedAt),
-    coverage: { excludedTools: [], untestedTools: [], limitations: ["Inventory unavailable; no assessment completed"], toolCalls: {}, resourceReads: 0 },
+    coverage: { excludedTools: [], untestedTools: [], limitations: ["Inventory unavailable; no assessment completed"], toolCalls: {}, probeFailures: {}, resourceReads: 0 },
     inventorySizes: { tools: 0, resources: 0, prompts: 0 }, results: [], findings: [], score: null, mcpveilVersion: VERSION,
   });
 }
@@ -69,12 +69,27 @@ export async function runScan(
   let resourceReads = 0;
   let contentRequests = 0;
   const resourceCache = new Map<string, Promise<ReadOutcome>>();
+  const probeFailures: Record<string, number> = {};
+  const toolProbeFailures = new Map<CheckId, number>();
   const limit = (id: CheckId, message: string) => {
     const result = results.get(id);
     if (result && !result.limitations!.includes(message)) result.limitations!.push(message);
   };
-  const track = <T extends ReadOutcome | ToolCallOutcome>(id: CheckId, label: string, outcome: T): T => {
-    if (outcome.error) results.get(id)?.errors.push(`${label}: ${outcome.error}`);
+  // Per-probe transport failures (timeouts, resets) are counted, never treated
+  // as scan errors on their own: a healthy server that drops one probe must
+  // still yield a complete assessment. Honesty is preserved by escalation —
+  // a check whose every tool probe failed, or a tool whose every probe across
+  // all checks failed, is reported as an error/limitation below.
+  const recordProbeFailure = (id: CheckId, label: string, toolProbe: boolean): void => {
+    const result = results.get(id);
+    if (result) result.probeFailures = (result.probeFailures ?? 0) + 1;
+    probeFailures[label] = (probeFailures[label] ?? 0) + 1;
+    if (toolProbe) toolProbeFailures.set(id, (toolProbeFailures.get(id) ?? 0) + 1);
+  };
+  const trackRead = <T extends ReadOutcome>(id: CheckId, label: string, outcome: T): T => {
+    // Protocol rejections (unknown resource/prompt, invalid arguments) are
+    // coverage skips, not transport failures.
+    if (outcome.error && !outcome.rejected) recordProbeFailure(id, label, false);
     if (outcome.truncated) limit(id, `${label}: response exceeded capture limit; remaining content untested`);
     return outcome;
   };
@@ -95,7 +110,9 @@ export async function runScan(
       results.get(id)!.invocations++;
       const outcome = await callToolSafe(session.client, name, args, config.timeoutMs, signal);
       latencies.push(outcome.durationMs);
-      return track(id, name, outcome);
+      if (outcome.error) recordProbeFailure(id, name, true);
+      if (outcome.truncated) limit(id, `${name}: response exceeded capture limit; remaining content untested`);
+      return outcome;
     },
     async readResource(id, uri, opts) {
       if (!active) return { ok: false, text: "", skipped: "inventory-only" };
@@ -109,7 +126,7 @@ export async function runScan(
       }
       const outcome = await resourceCache.get(uri)!;
       if (opts?.probe && outcome.rejected) return { ok: true, text: "" };
-      return track(id, uri, outcome);
+      return trackRead(id, uri, outcome);
     },
     async getPrompt(id, name, args) {
       if (!active) return { ok: false, text: "", skipped: "inventory-only" };
@@ -118,7 +135,7 @@ export async function runScan(
         return { ok: false, text: "", skipped: "request limit" };
       }
       contentRequests++;
-      return track(id, `prompt ${name}`, await getPromptSafe(session.client, name, args, config.timeoutMs, signal));
+      return trackRead(id, `prompt ${name}`, await getPromptSafe(session.client, name, args, config.timeoutMs, signal));
     },
   };
   for (const check of CHECKS) {
@@ -129,14 +146,24 @@ export async function runScan(
     const before = findings.length;
     try { await check.run(ctx); }
     catch (err) { result.errors.push(`check failed: ${err instanceof Error ? err.message : String(err)}`); }
+    if (result.invocations > 0 && (toolProbeFailures.get(check.meta.id) ?? 0) >= result.invocations) {
+      result.errors.push(`all ${result.invocations} probes failed`);
+    }
     result.findings = findings.slice(before);
   }
   const enabledActive = CHECKS.some((check) => !["prompt-injection", "transport-security"].includes(check.meta.id) && config.checks[check.meta.id] !== false);
-  const untestedTools = active && enabledActive ? inv.tools.filter((tool) => !excludedTools.includes(tool.name) && !toolCalls[tool.name]).map((tool) => tool.name) : [];
+  const everyProbeFailed = (name: string): boolean =>
+    (toolCalls[name] ?? 0) > 0 && (probeFailures[name] ?? 0) >= (toolCalls[name] ?? 0);
+  const untestedTools = active && enabledActive
+    ? inv.tools.filter((tool) => !excludedTools.includes(tool.name) && ((toolCalls[tool.name] ?? 0) === 0 || everyProbeFailed(tool.name))).map((tool) => tool.name)
+    : [];
+  const limitationFor = (name: string): string => (toolCalls[name] ?? 0) > 0
+    ? `${name}: every probe failed at the transport layer; the tool response surface is untested`
+    : `${name}: no supported active probe could be generated within the configured policy`;
   const limitations = [...new Set([
     ...[...results.values()].flatMap((result) => result.limitations ?? []),
     ...inv.tools.filter((tool) => !excludedTools.includes(tool.name)).flatMap((tool) => (tool.schemaLimitations ?? []).map((reason) => `${tool.name}: ${reason}`)),
-    ...untestedTools.map((name) => `${name}: no supported active probe could be generated within the configured policy`),
+    ...untestedTools.map(limitationFor),
   ])];
   const errors = [...(inv.errors ?? []), ...[...results.values()].flatMap((result) => result.errors.map((error) => `${result.meta.id}: ${error}`))];
   if (signal.aborted) errors.push("overall scan deadline or cancellation reached");
@@ -148,7 +175,7 @@ export async function runScan(
     schemaVersion: "2.0", status, policy: drift, mode: active ? "active" : "inventory", errors,
     target: safeTarget(target), serverInfo: inv.serverInfo, protocolEra: inv.protocolEra, startedAt, durationMs: Date.now() - Date.parse(startedAt),
     inventorySizes: { tools: inv.tools.length, resources: inv.resources.length, prompts: inv.prompts.length },
-    coverage: { excludedTools, untestedTools, limitations, toolCalls, resourceReads, latencyMs },
+    coverage: { excludedTools, untestedTools, limitations, toolCalls, probeFailures, resourceReads, latencyMs },
     results: [...results.values()], findings: deduped,
     score: status === "complete" && active ? computeScore(deduped) : null, mcpveilVersion: VERSION,
   });

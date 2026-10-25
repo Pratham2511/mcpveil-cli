@@ -18,7 +18,7 @@ an LLM or analysis-service API key.
 Use **Node >=22.12.0**; Node 22 and 24 LTS are tested. Node 18/20 are unsupported.
 
 ```bash
-npm install --global mcpveil-cli@0.4.1
+npm install --global mcpveil-cli
 mcpveil doctor
 mcpveil --version
 
@@ -61,7 +61,7 @@ These are bounded checks, not a proof that a server or an agent is secure.
 Prompt-injection heuristics do not establish whether an LLM will follow an
 instruction. A credential-shaped match does not validate that a credential is
 live. Unsupported schemas, exhausted budgets, truncation, and operational
-failures are reported as assessment limitations.
+failures are reported as assessment limitations or failed-probe counts.
 
 ## Reports and CI
 
@@ -74,16 +74,27 @@ mcpveil scan --stdio "node test-server.js" --yes --format sarif -o report.sarif
 |---|---|
 | 0 | Completed requested assessment; no finding exceeds the configured threshold |
 | 1 | Completed assessment with a policy-breaking finding |
-| 2 | Failed or partial assessment, including timeout or insufficient coverage |
+| 2 | Failed or partial assessment, including an overall deadline or a check/tool whose every probe failed |
 | 3 | Invalid arguments/configuration, unsupported runtime, or missing consent |
 
 `--fail-on never` disables finding-based failures; it does **not** turn a failed
 or incomplete scan into success. Reports include `schemaVersion`, `status`,
-`mode`, errors, excluded/untested tools, call counts, measured p50/p95 tool-request
-latency and limitations. Terminal output groups related signals; JSON and SARIF retain
-individual findings and remediation. Incomplete
+`mode`, errors, excluded/untested tools, call counts, failed-probe counts
+(`coverage.probeFailures` and per-check `probeFailures`), measured p50/p95
+tool-request latency and limitations. Terminal output groups related signals;
+JSON and SARIF retain individual findings and remediation. Incomplete
 and metadata-only scans have `score: null`; they are not assigned a security
 grade. SARIF sets `executionSuccessful: false` for incomplete assessments.
+
+A single probe timing out or being reset is not a scan error: it is counted in
+`coverage.probeFailures` (per tool name, resource URI, or prompt label) and the
+assessment stays `complete` when other probes of the same check and tool
+succeed. Escalation stays honest — a check reports `"<check>: all N probes
+failed"` when every one of its tool probes failed, and a tool whose every probe
+failed across all checks is listed in `coverage.untestedTools` with a
+limitation, yielding a `partial` assessment for a genuinely untestable tool.
+Server rejections of probes (unknown resource/prompt, invalid arguments) are
+coverage skips, not failures.
 
 Reports and scanner/target error output are sanitized, including secret-shaped
 excerpts, supplied credentials, sensitive command flags, and URL credentials.
@@ -181,7 +192,12 @@ on Node 22/24; the protected Linux 18/20 jobs verify explicit rejection.
 
 Argument planning supports bounded nested objects/arrays, local references,
 nullable alternatives, enum/const siblings, and common numeric/size constraints.
-At most two ranked injectable leaves per check are probed. The parser is bounded
+Probes send the attacked argument plus required siblings only — optional
+arguments are never auto-filled, because servers may reject the combination —
+and required string siblings are filled with format-valid values when the
+schema declares `format` (date, date-time, email, uri, uuid, IPv4/IPv6,
+hostname and friends). At most two ranked injectable leaves per check are
+probed. The parser is bounded
 to depth 12 and 512 nodes. External/recursive references, complex alternatives and
 unsupported constraints (including regular expressions) are surfaced; arbitrary
 server-provided regexes are never executed. Schema support does not imply exhaustive

@@ -19,14 +19,33 @@ it("bounds recursive references and records unsupported constraints without eval
   expect(parsed.limitations).toContain("unsupported schema constraint: pattern");
 });
 it("does not attack enum/const arguments or violate advertised string length", () => {
-  const t = tool({ type: "object", properties: { command: { enum: ["list", "get"] }, path: { type: "string", maxLength: 3 } } });
+  const t = tool({ type: "object", properties: { command: { enum: ["list", "get"] }, path: { type: "string", maxLength: 3 } }, required: ["command", "path"] });
   const calls = planCalls(t, "command", ["long-payload", "../"], 5);
   expect(calls).toHaveLength(1);
   expect(calls[0].args).toMatchObject({ command: "list", path: "../" });
+});
+it("omits optional siblings instead of guessing values the server may reject", () => {
+  const t = tool({ type: "object", properties: { command: { enum: ["list", "get"] }, path: { type: "string" } }, required: ["path"] });
+  const calls = planCalls(t, "command", ["payload"], 5);
+  expect(calls).toHaveLength(1);
+  expect(calls[0].args).toEqual({ path: "payload" });
 });
 it("handles hostile property names without changing object prototypes", () => {
   const t = tool(JSON.parse('{"type":"object","properties":{"__proto__":{"type":"string"}},"required":["__proto__"]}'));
   const call = planCalls(t, "neutral", ["probe"], 1)[0];
   expect(Object.hasOwn(call.args, "__proto__")).toBe(true);
   expect(Object.getPrototypeOf(call.args)).toBe(Object.prototype);
+});
+it("captures string formats and reports formats it cannot fill", () => {
+  const parsed = parseSchema({ type: "object", properties: {
+    when: { type: "string", format: "date-time" },
+    bucket: { type: "string", format: "duration" },
+    count: { type: "number", format: "int32" },
+  } });
+  const [when, bucket, count] = parsed.properties;
+  expect(when.format).toBe("date-time");
+  expect(bucket.format).toBe("duration");
+  expect(count.format).toBeUndefined();
+  expect(parsed.limitations).toContain("unsupported string format: duration");
+  expect(parsed.limitations).toContain("unsupported schema constraint: format");
 });

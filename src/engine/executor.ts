@@ -67,5 +67,5 @@ export async function getPromptSafe(
       return "";
     }).join("\n");
     return { ok: true, text: text.slice(0, MAX_CAPTURE_CHARS), truncated: text.length > MAX_CAPTURE_CHARS };
-  } catch (err) { return { ok: false, text: "", error: failure(err) }; }
+  } catch (err) { return { ok: false, text: "", error: failure(err), rejected: err instanceof ProtocolError && [ProtocolErrorCode.InvalidParams, -32002].includes(err.code) }; }
 }

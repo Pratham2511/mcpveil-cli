@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.5.0
+
+Compatibility: report schema stays `2.0` and this entry is additive-only —
+new `coverage.probeFailures` and per-check `CheckResult.probeFailures` fields.
+Exit codes are unchanged.
+
+- Probe calls no longer auto-fill optional arguments. Args are built from
+  required siblings plus the attacked argument, so servers that reject
+  combinations such as `head`+`tail` (the official filesystem server) accept
+  the probe instead of rejecting it outright. The SQL benign baseline uses the
+  same required-only shape.
+- Benign fillers are format- and enum-aware for strings: `date`, `date-time`,
+  `time`, `email`, `uri`/`url`, `uuid`, `ipv4`, `ipv6` and `hostname` formats
+  are captured from schemas and filled with valid literals; unknown formats
+  are surfaced as coverage limitations instead of risking rejected probes.
+- Per-probe transport failures (timeouts, resets) are counted in
+  `CheckResult.probeFailures` and `coverage.probeFailures` instead of scan
+  `errors`. A single dropped probe — for example a link-local-blackholed
+  `169.254.169.254` SSRF probe — no longer flips an otherwise healthy scan to
+  `partial`/exit 2. Honesty is preserved: a check whose every tool probe
+  failed reports `"<check>: all N probes failed"`, and a tool whose every
+  probe across all checks failed is listed in `coverage.untestedTools` with a
+  limitation, still yielding `partial` for genuinely untestable tools.
+- `prompts/get` protocol validation errors map to coverage skips (rejected)
+  like resource reads, instead of scan errors.
+- The accuracy harness is environment-independent: it passes on networks
+  where link-local metadata addresses blackhole, verified twice for
+  determinism, plus a new hanging-fixture e2e proving timeouts are counted
+  without failing the assessment.
+
 ## 0.4.1
 
 - Stage a production-only manifest and shrinkwrap before release packing. Normal npm installs no longer receive extraneous development tools or legacy server dependencies.
