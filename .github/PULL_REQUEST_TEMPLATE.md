@@ -40,11 +40,11 @@ If you touched any of these, explain why the change is backward-compatible (or w
 - [ ] No real credentials, tokens, or private data in code, tests, fixtures, or output — synthetic shapes only (e.g. `AKIAIOSFODNN7EXAMPLE`)
 - [ ] No test weakened, skipped, or given a longer timeout to hide a failure
 
-## AI assistance disclosure
+## AI assistance (optional, preferred if used)
 
-All contributions are responsible contributions — whether written by hand, by an AI pair, or somewhere in between.
+All contributions are responsible contributions — whatever tools helped write them.
 
 - [ ] **No AI assistance was used**, or
-- [ ] AI assistance was used for: _(which parts — code, tests, docs)_. I have read, understand, and take full responsibility for every line of this contribution as if I wrote it myself.
+- [ ] AI assistance was used for: _(which parts — code, tests, docs — a note is appreciated and helps reviewers focus)_
 
-AI-assisted contributions are welcome. Undisclosed or unreviewed AI-generated contributions are not: they will be asked to complete this section before review proceeds.
+Disclosing AI assistance is preferred but not required. Either way, you review and own every line of your contribution as if you wrote it yourself.
