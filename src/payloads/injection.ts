@@ -60,6 +60,14 @@ export const SQL_ERROR_SIGNALS: RegExp[] = [
   /ORA-\d{5}/i,                             // Oracle
   /unclosed quotation mark after the character string/i, // MSSQL
   /near ".*?": syntax error/i,              // SQLite raw message
+  // MariaDB phrases the 1064 syntax error differently from MySQL; anchor on
+  // the server-name wording so ordinary "check the manual" prose stays clean.
+  /check the manual that corresponds to your MariaDB server version/i, // MariaDB
+  /ERROR:\s+unimplemented:|invalid syntax: statement ignored/i, // CockroachDB
+  /Dynamic SQL Error|Token unknown - line \d+, column \d+/i, // Firebird / InterBase
+  /SQLCODE\s*=\s*-\d+,\s*SQLSTATE\s*=\s*[0-9A-Z]{5}/i, // IBM Db2
+  /(?:SYNTAX_ERROR|SYNTAX ERROR):\s*line \d+:\d+:/i, // Trino / Presto
+  /line \d+:\d+: mismatched input/i,        // Trino / Presto parser detail
 ];
 
 /** Tautology confirmation: server returned MORE rows than the benign probe. */
