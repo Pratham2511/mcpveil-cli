@@ -15,11 +15,18 @@ export const SECRET_PATTERNS: SecretPattern[] = [
   { id: "anthropic", name: "Anthropic API Key", regex: /\b(sk-ant-[A-Za-z0-9_-]{20,})\b/, severity: "critical", group: 1 },
   { id: "slack", name: "Slack Token", regex: /\b(xox[bpars]-[A-Za-z0-9-]{10,})\b/, severity: "high", group: 1 },
   { id: "google", name: "Google API Key", regex: /\b(AIza[0-9A-Za-z_-]{35})\b/, severity: "high", group: 1 },
+  { id: "gcp-oauth-token", name: "Google OAuth access token", regex: /\b(ya29\.[0-9A-Za-z_-]{20,})/, severity: "high", group: 1 },
+  { id: "azure-storage-key", name: "Azure storage account key", regex: /\bAccountKey\s*=\s*([A-Za-z0-9+/]{40,}={0,2})/i, severity: "critical", group: 1 },
+  { id: "azure-sas-token", name: "Azure SAS signature", regex: /[?&]sv=\d{4}-\d{2}-\d{2}[^\s"']{0,200}?[?&]sig=([A-Za-z0-9%+/=]{20,})/i, severity: "high", group: 1 },
   { id: "npm", name: "npm token", regex: /\b(npm_[A-Za-z0-9]{36})\b/, severity: "critical", group: 1 },
+  { id: "npmrc-auth-token", name: "npm registry auth token", regex: /\b_authToken\s*=\s*["']?([A-Za-z0-9][A-Za-z0-9._-]{19,})/, severity: "critical", group: 1 },
   { id: "private-key", name: "Private Key Block", regex: /(-----BEGIN [A-Z ]*PRIVATE KEY-----)/, severity: "critical", group: 1 },
   { id: "jwt", name: "JWT", regex: /\b(eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{5,})\b/, severity: "high", group: 1 },
   { id: "basic-auth-url", name: "Credentials in URL", regex: /\bhttps?:\/\/[^/\s:]+:([^/\s@]{8,})@/, severity: "high", group: 1 },
   { id: "env-assignment", name: "Secret-looking env assignment", regex: /\b([A-Z_]*(?:PASSWORD|SECRET|TOKEN|API_KEY|PRIVATE_KEY)[A-Z_]*)\s*=\s*["']?([^\s"'{};]{8,})/, severity: "medium", group: 2 },
+  // Credential-bearing database URLs are listed first: their masked evidence is
+  // the password, which is more actionable than the generic URI that follows.
+  { id: "db-credential-url", name: "Database URL with credentials", regex: /\b(?:mongodb(?:\+srv)?|postgres(?:ql)?|mysql|rediss?|mssql|amqp):\/\/[^\s\/:@'"]+:(?!\$[{(<])([^\s\/@'"]{3,})@/, severity: "high", group: 1 },
   { id: "db-uri", name: "Database connection URI", regex: /\b(mongodb(?:\+srv)?|postgres|postgresql|mysql|redis):\/\/[^\s'"]{8,}/, severity: "high" },
   { id: "json-secret", name: "Secret-like JSON value", regex: /["'][A-Za-z0-9_-]*(?:password|passwd|secret|token|api[-_]?key|private[-_]?key)[A-Za-z0-9_-]*["']\s*:\s*["']([^"'\\]{8,})["']/i, severity: "medium", group: 1 },
 ];
